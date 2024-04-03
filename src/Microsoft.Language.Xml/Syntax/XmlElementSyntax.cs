@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Language.Xml.Collections;
 
 namespace Microsoft.Language.Xml
 {
     using InternalSyntax;
 
-    public class XmlElementSyntax : XmlNodeSyntax, IXmlElement, IXmlElementSyntax, INamedXmlNode
+    public class XmlElementSyntax : XmlElementBaseSyntax, IXmlElementSyntax<XmlElementSyntax>, INamedXmlNode
     {
         internal new class Green : XmlNodeSyntax.Green
         {
@@ -115,88 +116,33 @@ namespace Microsoft.Language.Xml
         }
 
         public XmlNameSyntax NameNode => StartTag?.NameNode;
-        public string Name => StartTag?.Name;
 
-        public IEnumerable<IXmlElementSyntax> Elements
-        {
-            get
-            {
-                if (Content.Node is SyntaxList list)
-                {
-                    return list.ChildNodes.OfType<IXmlElementSyntax>();
-                }
-                else if (Content.Node is IXmlElementSyntax elementSyntax)
-                {
-                    return new IXmlElementSyntax[] { elementSyntax };
-                }
+        public override string Name => StartTag?.Name;
 
-                return SpecializedCollections.EmptyEnumerable<IXmlElementSyntax>();
-            }
-        }
+        public XmlElementEnumerator XmlElements => new(Content);
 
-        public XmlAttributeSyntax GetAttribute(string localName, string prefix = null) => StartTag.AttributesNode.FirstOrDefault(
-            attr => string.Equals(attr.NameNode.LocalName, localName, StringComparison.Ordinal) && string.Equals(attr.NameNode.Prefix, prefix, StringComparison.Ordinal)
-        );
+        public override string Value => Content.ToFullString();
 
-        public string GetAttributeValue(string localName, string prefix = null) => GetAttribute(localName, prefix)?.Value;
+        public override XmlElementEnumerator Elements => new(Content);
 
-        public IXmlElement AsElement => this;
-        public IXmlElementSyntax AsSyntaxElement => this;
+        protected override IXmlElementSyntax AsSyntaxElement => this;
 
-        #region IXmlElement
-        int IXmlElement.Start => Start;
-
-        int IXmlElement.FullWidth => FullWidth;
-
-        string IXmlElement.Name => Name;
-
-        string IXmlElement.Value => Content.ToFullString();
-
-        IXmlElement IXmlElement.Parent => Parent as IXmlElement;
-
-        IEnumerable<IXmlElement> IXmlElement.Elements => Elements.Select(el => el.AsElement);
-
-        IEnumerable<KeyValuePair<string, string>> IXmlElement.Attributes
-        {
-            get
-            {
-                if (StartTag?.AttributesNode == null)
-                {
-                    yield break;
-                }
-
-                var singleAttribute = StartTag?.AttributesNode.Node as XmlAttributeSyntax;
-                if (singleAttribute != null)
-                {
-                    yield return new KeyValuePair<string, string>(singleAttribute.Name, singleAttribute.Value);
-                    yield break;
-                }
-
-                foreach (var attribute in StartTag?.AttributesNode.OfType<XmlAttributeSyntax>())
-                {
-                    yield return new KeyValuePair<string, string>(attribute.Name, attribute.Value);
-                }
-            }
-        }
-
-        IXmlElementSyntax IXmlElement.AsSyntaxElement => this;
-
-        string IXmlElement.this[string attributeName] => GetAttributeValue(attributeName);
-        #endregion
+        public override SyntaxList<XmlAttributeSyntax> AttributesNode => StartTag?.AttributesNode ?? default;
 
         #region IXmlElementSyntax
 
-        IEnumerable<XmlAttributeSyntax> IXmlElementSyntax.Attributes => (IEnumerable<XmlAttributeSyntax>)StartTag?.AttributesNode;
-        IXmlElementSyntax IXmlElementSyntax.Parent => ParentElement;
+        IEnumerable<XmlAttributeSyntax> IXmlElementSyntax.Attributes => StartTag?.AttributesNode;
+        XmlElementBaseSyntax IXmlElementSyntax.Parent => ParentElement;
         XmlNodeSyntax IXmlElementSyntax.AsNode => this;
         SyntaxList<XmlAttributeSyntax> IXmlElementSyntax.AttributesNode => StartTag.AttributesNode;
+        XmlElementBaseSyntax IXmlElementSyntax.WithAttributes(IEnumerable<XmlAttributeSyntax> newAttributes) => WithStartTag(StartTag.WithAttributes(new SyntaxList<XmlAttributeSyntax>(newAttributes)));
+        XmlElementBaseSyntax IXmlElementSyntax.WithAttributes(SyntaxList<XmlAttributeSyntax> newAttributes) => WithStartTag(StartTag.WithAttributes(newAttributes));
+        XmlElementSyntax IXmlElementSyntax.WithContent(SyntaxList<SyntaxNode> newContent) => WithContent(newContent);
+        XmlElementBaseSyntax IXmlElementSyntax.WithName(XmlNameSyntax newName) => WithStartTag(StartTag.WithName(newName));
 
-        IXmlElementSyntax IXmlElementSyntax.WithName(XmlNameSyntax newName) => WithStartTag(StartTag.WithName(newName));
-
-        IXmlElementSyntax IXmlElementSyntax.WithContent(SyntaxList<SyntaxNode> newContent) => Update(StartTag, newContent, EndTag);
-
-        IXmlElementSyntax IXmlElementSyntax.WithAttributes(IEnumerable<XmlAttributeSyntax> newAttributes) => WithStartTag(StartTag.WithAttributes(new SyntaxList<XmlAttributeSyntax>(newAttributes)));
-        IXmlElementSyntax IXmlElementSyntax.WithAttributes(SyntaxList<XmlAttributeSyntax> newAttributes) => WithStartTag(StartTag.WithAttributes(newAttributes));
+        XmlElementSyntax IXmlElementSyntax<XmlElementSyntax>.WithName(XmlNameSyntax newName) => WithStartTag(StartTag.WithName(newName));
+        XmlElementSyntax IXmlElementSyntax<XmlElementSyntax>.WithAttributes(IEnumerable<XmlAttributeSyntax> newAttributes) => WithStartTag(StartTag.WithAttributes(new SyntaxList<XmlAttributeSyntax>(newAttributes)));
+        XmlElementSyntax IXmlElementSyntax<XmlElementSyntax>.WithAttributes(SyntaxList<XmlAttributeSyntax> newAttributes) => WithStartTag(StartTag.WithAttributes(newAttributes));
 
         #endregion
 

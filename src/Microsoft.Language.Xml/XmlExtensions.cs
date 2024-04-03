@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.Language.Xml
 {
@@ -24,7 +25,8 @@ namespace Microsoft.Language.Xml
         /// Return a new <see cref="IXmlElementSyntax"/> instance with
         /// the supplied string prefix.
         /// </summary>
-        public static IXmlElementSyntax WithPrefixName(this IXmlElementSyntax element, string prefixName)
+        public static TSelf WithPrefixName<TSelf>(this TSelf element, string prefixName)
+            where TSelf : class, IXmlElementSyntax<TSelf>
         {
             var existingName = element.NameNode;
             var existingPrefix = existingName.PrefixNode;
@@ -61,19 +63,23 @@ namespace Microsoft.Language.Xml
             return attribute.WithName(existingName.WithLocalName(newName));
         }
 
-        public static IXmlElementSyntax AddChild(this IXmlElementSyntax parent, IXmlElementSyntax child)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static XmlElementSyntax AddChild<TSelf>(this TSelf parent, IXmlElementSyntax child)
+            where TSelf : class, IXmlElementSyntax<TSelf>
         {
             return parent.WithContent(parent.Content.Add(child.AsNode));
         }
 
-        public static IXmlElementSyntax InsertChild(this IXmlElementSyntax parent, IXmlElementSyntax child, int index)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static XmlElementSyntax InsertChild<TSelf>(this TSelf parent, IXmlElementSyntax child, int index)
+            where TSelf : class, IXmlElementSyntax<TSelf>
         {
-            if (index == -1)
-                return AddChild(parent, child);
-            return parent.WithContent(parent.Content.Insert(index, child.AsNode));
+            return index == -1 ? AddChild(parent, child) : parent.WithContent(parent.Content.Insert(index, child.AsNode));
         }
 
-        public static IXmlElementSyntax RemoveChild(this IXmlElementSyntax parent, IXmlElementSyntax child)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static XmlElementSyntax RemoveChild<TSelf>(this TSelf parent, IXmlElementSyntax child)
+            where TSelf : class, IXmlElementSyntax<TSelf>
         {
             return parent.WithContent(parent.Content.Remove(child.AsNode));
         }
@@ -92,24 +98,64 @@ namespace Microsoft.Language.Xml
             }
         }
 
-        public static IXmlElementSyntax AddAttributes(this IXmlElementSyntax self, params XmlAttributeSyntax[] attributes)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T AddAttributes<T>(this T self, params XmlAttributeSyntax[] attributes)
+            where T : class, IXmlElementSyntax<T>
         {
             return self.WithAttributes(self.AttributesNode.AddRange(attributes));
         }
 
-        public static IXmlElementSyntax AddAttributes(this IXmlElementSyntax self, IEnumerable<XmlAttributeSyntax> attributes)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T AddAttributes<T>(this IXmlElementSyntax<T> self, IEnumerable<XmlAttributeSyntax> attributes)
+            where T : class, IXmlElementSyntax<T>
         {
             return self.WithAttributes(self.AttributesNode.AddRange(attributes));
         }
 
-        public static IXmlElementSyntax AddAttribute(this IXmlElementSyntax self, XmlAttributeSyntax attribute)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T AddAttribute<T>(this IXmlElementSyntax<T> self, XmlAttributeSyntax attribute)
+            where T : class, IXmlElementSyntax<T>
         {
             return self.WithAttributes(self.AttributesNode.Add(attribute));
         }
 
-        public static IXmlElementSyntax RemoveAttribute(this IXmlElementSyntax self, XmlAttributeSyntax attribute)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T RemoveAttribute<T>(this IXmlElementSyntax<T> self, XmlAttributeSyntax attribute)
+            where T : class, IXmlElementSyntax<T>
         {
             return self.WithAttributes(self.AttributesNode.Remove(attribute));
+        }
+
+        public static T SetAttribute<T>(this T rule, string attributeName, string value)
+            where T : XmlElementBaseSyntax, IXmlElementSyntax<T>
+        {
+            XmlAttributeSyntax attribute = rule.GetAttribute(attributeName);
+            XmlStringSyntax newValue = SyntaxFactory.XmlString(
+                SyntaxFactory.Punctuation(SyntaxKind.DoubleQuoteToken, "\"", null, null),
+                SyntaxFactory.List([
+                    SyntaxFactory.XmlTextLiteralToken(value, null, null)
+                ]),
+                SyntaxFactory.Punctuation(SyntaxKind.DoubleQuoteToken, "\"", null, null)
+            );
+
+            if (attribute is not null)
+            {
+                return rule.ReplaceNode(
+                    attribute,
+                    attribute.WithValue(newValue)
+                );
+            }
+
+            T newRule = rule.AddAttribute(
+                SyntaxFactory.XmlAttribute(
+                    SyntaxFactory.XmlName(null, SyntaxFactory.XmlNameToken(attributeName, SyntaxFactory.Space, null)),
+                    SyntaxFactory.Punctuation(SyntaxKind.EqualsToken, "=", null, null),
+                    newValue
+                )
+            );
+
+            return newRule;
+
         }
     }
 }

@@ -57,9 +57,9 @@ namespace Microsoft.Language.Xml.Editor
                 return indent - indentSize;
             }
 
-            bool isElementWithAName = node is IXmlElement &&
+            bool isElementWithAName = node is XmlElementBaseSyntax &&
                 !(node is XmlDocumentSyntax) &&
-                !string.IsNullOrEmpty(((IXmlElement)node).Name);
+                !string.IsNullOrEmpty(((XmlElementBaseSyntax)node).Name);
             if (isElementWithAName)
             {
                 indent += indentSize;
@@ -86,7 +86,7 @@ namespace Microsoft.Language.Xml.Editor
 
         private static int GetLeadingWhitespaceLength(SyntaxNode node)
         {
-            if (!(node is IXmlElement))
+            if (!(node is XmlElementBaseSyntax))
             {
                 return 0;
             }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Xml;
 
 namespace Microsoft.Language.Xml
 {
@@ -8,6 +9,8 @@ namespace Microsoft.Language.Xml
     {
         public static readonly SyntaxToken EofToken = Token(null, SyntaxKind.EndOfFileToken, null, "");
         public static readonly SyntaxTrivia CarriageReturnLineFeed = EndOfLineTrivia("\r\n");
+        public static readonly SyntaxTrivia Space = WhitespaceTrivia(" ");
+        public static readonly SyntaxTrivia Tab = WhitespaceTrivia("\t");
 
         public static XmlDocumentSyntax XmlDocument(
             XmlDeclarationSyntax prologue,

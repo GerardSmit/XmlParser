@@ -277,7 +277,7 @@ namespace Microsoft.Language.Xml
             return current;
         }
 
-        public IXmlElementSyntax ParentElement
+        public XmlElementBaseSyntax ParentElement
         {
             get
             {
@@ -286,7 +286,7 @@ namespace Microsoft.Language.Xml
                 {
                     if (current.IsElement())
                     {
-                        return (IXmlElementSyntax)current;
+                        return (XmlElementBaseSyntax)current;
                     }
 
                     current = current.Parent;

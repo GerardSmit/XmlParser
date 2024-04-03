@@ -65,8 +65,9 @@ namespace Microsoft.Language.Xml
 
         internal new Green GreenNode => (Green)base.GreenNode;
 
-        XmlPrefixSyntax prefix;
-        XmlNameTokenSyntax localName;
+        private XmlPrefixSyntax prefix;
+        private XmlNameTokenSyntax localName;
+        private string fullName;
 
         public XmlPrefixSyntax PrefixNode => GetRed(ref prefix, 0);
         public XmlNameTokenSyntax LocalNameNode => GetRed(ref localName, 1);
@@ -85,7 +86,7 @@ namespace Microsoft.Language.Xml
         public string LocalName => LocalNameNode?.Text;
         public string Prefix => PrefixNode?.Name?.Text;
 
-        public string FullName => (PrefixNode != null ? (PrefixNode.Name?.Text ?? string.Empty) + ":" : string.Empty) + (LocalNameNode?.Text ?? string.Empty);
+        public string FullName => fullName ??= (PrefixNode != null ? (PrefixNode.Name?.Text ?? string.Empty) + ":" : string.Empty) + (LocalNameNode?.Text ?? string.Empty);
 
         public override string ToString()
         {

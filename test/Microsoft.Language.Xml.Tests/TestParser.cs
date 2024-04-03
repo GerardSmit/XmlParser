@@ -59,6 +59,21 @@ namespace Microsoft.Language.Xml.Tests
         }
 
         [Fact]
+        public void ParserAttributeEnumerator()
+        {
+            var document = T("<a b='bval' d='dval'><c /></a>");
+            var enumerator = document.Root.Attributes.GetEnumerator();
+
+            Assert.True(enumerator.MoveNext());
+            Assert.Equal("b", enumerator.Current.Key);
+
+            Assert.True(enumerator.MoveNext());
+            Assert.Equal("d", enumerator.Current.Key);
+
+            Assert.False(enumerator.MoveNext());
+        }
+
+        [Fact]
         public void ParserErrorTolerance()
         {
             T("");
@@ -135,7 +150,7 @@ namespace Microsoft.Language.Xml.Tests
             var root = Parser.ParseText(xml);
 
             var descendantList = root.Descendants().Select (x => x.AsElement).Select(x =>
-                new KeyValuePair<int, IXmlElement>(x.Start, x))
+                new KeyValuePair<int, XmlElementBaseSyntax>(x.Start, x))
                 .ToList();
 
             int last = 0;

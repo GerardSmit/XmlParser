@@ -67,13 +67,13 @@ namespace Microsoft.Language.Xml.Editor
 
         private void CollectElementSpans(SyntaxNode node, List<Tuple<Span, string>> spans, int start)
         {
-            if (node is IXmlElement)
+            if (node is XmlElementBaseSyntax)
             {
                 var leading = node.GetLeadingTriviaWidth();
                 var trailing = node.GetTrailingTriviaWidth();
                 spans.Add(Tuple.Create(
                     new Span(start + leading, node.FullWidth - leading - trailing),
-                    "<" + (node as IXmlElement).Name + ">"));
+                    "<" + (node as XmlElementBaseSyntax).Name + ">"));
             }
 
             foreach (var child in node.ChildNodes)
@@ -86,7 +86,7 @@ namespace Microsoft.Language.Xml.Editor
         private void RaiseTagsChanged(ITextSnapshot snapshot)
         {
             TagsChanged?.Invoke(
-                this, 
+                this,
                 new SnapshotSpanEventArgs(
                     new SnapshotSpan(snapshot, 0, snapshot.Length)));
         }
