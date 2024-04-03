@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using Microsoft.Language.Xml.Collections;
 
 namespace Microsoft.Language.Xml
 {
@@ -71,7 +72,61 @@ namespace Microsoft.Language.Xml
                 return root;
             }
 
+            // Fast path for XML nodes
+            if (root is XmlElementSyntax baseSyntax &&
+                oldNode is XmlElementBaseSyntax oldElement &&
+                newNode is XmlElementBaseSyntax newElement)
+            {
+                return TryReplaceXmlNode(baseSyntax, oldElement, newElement, out XmlElementSyntax result)
+                    ? (TRoot)(object)result
+                    : root;
+            }
+
             return (TRoot)root.ReplaceCore(nodes: new SyntaxList<SyntaxNode>(oldNode), computeReplacementNode: (o, r) => newNode);
+        }
+
+        internal static bool TryReplaceXmlNode(this XmlElementSyntax baseSyntax, XmlElementBaseSyntax oldElement, XmlElementBaseSyntax newElement, out XmlElementSyntax result, List<int> path = null)
+        {
+            using XmlElementEnumerator enumerator = baseSyntax.Elements.GetEnumerator();
+
+            while (enumerator.MoveNext())
+            {
+                if (enumerator.Current == oldElement)
+                {
+                    result = baseSyntax.WithContent(
+                        baseSyntax.Content.Replace(enumerator.CurrentIndex, newElement)
+                    );
+
+                    path?.Add(enumerator.CurrentIndex);
+                    return true;
+                }
+
+                if (TryReplaceXmlNode(enumerator.Current as XmlElementSyntax, oldElement, newElement, out var newChild, path))
+                {
+                    result = baseSyntax.WithContent(
+                        baseSyntax.Content.Replace(enumerator.CurrentIndex, newChild)
+                    );
+
+                    path?.Add(enumerator.CurrentIndex);
+
+                    return true;
+                }
+            }
+
+            result = baseSyntax;
+            return false;
+        }
+
+        internal static XmlElementBaseSyntax GetElementByPath(this XmlElementBaseSyntax element, List<int> path)
+        {
+            XmlElementBaseSyntax current = element;
+
+            foreach (var index in path)
+            {
+                current = (XmlElementBaseSyntax)current.Content[index];
+            }
+
+            return current;
         }
 
         /// <summary>

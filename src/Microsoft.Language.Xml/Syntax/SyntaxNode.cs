@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Threading;
+using Microsoft.Language.Xml.Collections;
 
 namespace Microsoft.Language.Xml
 {
@@ -246,20 +247,7 @@ namespace Microsoft.Language.Xml
 
         internal abstract SyntaxNode GetNodeSlot(int index);
 
-        public IEnumerable<SyntaxNode> ChildNodes
-        {
-            get
-            {
-                for (int i = 0; i < GreenNode.SlotCount; i++)
-                {
-                    var child = GetNodeSlot(i);
-                    if (child != null)
-                    {
-                        yield return child;
-                    }
-                }
-            }
-        }
+        public SyntaxNodeEnumerator ChildNodes => new(this);
 
         public SyntaxNode GetParent(int parentChainLength = 1)
         {

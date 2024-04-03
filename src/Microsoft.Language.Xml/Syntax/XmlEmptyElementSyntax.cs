@@ -168,7 +168,8 @@ namespace Microsoft.Language.Xml
         public override XmlElementSyntax WithContent(SyntaxList<SyntaxNode> content)
         {
             var greaterThanToken = SyntaxFactory.Punctuation(SyntaxKind.GreaterThanToken, ">", null, null);
-            var startTag = SyntaxFactory.XmlElementStartTag(this.LessThanToken, this.NameNode.WithTrailingTrivia(), this.AttributesNode, greaterThanToken);
+            var startName = this.AttributesNode.Count == 0 ? this.NameNode.WithTrailingTrivia() : this.NameNode.WithTrailingTrivia(SyntaxFactory.Space);
+            var startTag = SyntaxFactory.XmlElementStartTag(this.LessThanToken, startName, this.AttributesNode, greaterThanToken);
             var lessThanSlashToken = SyntaxFactory.Punctuation(SyntaxKind.LessThanSlashToken, "</", null, null);
             var endTag = SyntaxFactory.XmlElementEndTag(lessThanSlashToken, this.NameNode.WithTrailingTrivia(), greaterThanToken);
             var newNode = SyntaxFactory.XmlElement(startTag, content, endTag);

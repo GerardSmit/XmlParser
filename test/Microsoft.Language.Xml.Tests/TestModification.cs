@@ -17,10 +17,10 @@ namespace Microsoft.Language.Xml.Tests
         [Fact]
         public void TestElementWithAttributeAndContent()
         {
-            var root = Parser.ParseText("<a b=\"c\"/>")?.RootSyntax;
-            var content = Parser.ParseText("<d />")?.RootSyntax;
+            var root = Parser.ParseText("<a b=\"c\"/>").RootSyntax;
+            var content = Parser.ParseText("<d />").RootSyntax;
             root = root.WithContent(SyntaxFactory.SingletonList(content));
-            Assert.Equal("<a b=\"c\"><d /></a >", root.ToFullString());
+            Assert.Equal("<a b=\"c\"><d /></a>", root.ToFullString());
         }
     }
 }

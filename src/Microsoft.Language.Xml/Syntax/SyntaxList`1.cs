@@ -249,6 +249,19 @@ namespace Microsoft.Language.Xml
             }
         }
 
+        public SyntaxList<TNode> Replace(int index, TNode node)
+        {
+            if (index < 0 || index >= this.Count)
+            {
+                throw new ArgumentException(nameof(index));
+            }
+
+            var list = this.ToList();
+            list.RemoveAt(index);
+            list.Insert(index, node);
+            return CreateList(list);
+        }
+
         /// <summary>
         /// Creates a new list with the element at specified index removed.
         /// </summary>

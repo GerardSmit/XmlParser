@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Microsoft.Language.Xml.Collections;
 
 namespace Microsoft.Language.Xml
 {
@@ -83,13 +84,11 @@ namespace Microsoft.Language.Xml
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static XmlElementSyntax AddChild<TSelf, TChild>(this TSelf parent, ref TChild child)
+        public static XmlElementSyntax AddChild<TSelf, TChild>(this TSelf parent, TChild child, out int index)
             where TSelf : XmlElementBaseSyntax
             where TChild : XmlElementBaseSyntax
         {
-            XmlElementSyntax newParent = parent.WithContent(parent.Content.Add(child, out var index));
-            child = (TChild) newParent.Content[index];
-            return newParent;
+            return parent.WithContent(parent.Content.Add(child, out index));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -188,20 +187,56 @@ namespace Microsoft.Language.Xml
 
         public static XmlElementSyntax GetOrAddElement(this XmlElementBaseSyntax root, string name, out XmlElementSyntax result)
         {
-            foreach (XmlElementBaseSyntax child in root.Elements)
+            if (name.Contains("/"))
             {
-                if (!name.Equals(child.Name, StringComparison.Ordinal))
+                var parts = name.Split('/');
+                var i = 0;
+
+                var path = new List<int>();
+                XmlElementSyntax parent = root.GetOrAddElementCore(parts[i], out result).Node;
+
+                while (++i < parts.Length)
                 {
-                    continue;
+                    var (next, changed, index) = result.GetOrAddElementCore(parts[i], out XmlElementSyntax nextResult);
+
+                    if (changed)
+                    {
+                        path.Clear();
+
+                        if (!parent.TryReplaceXmlNode(result, next, out parent, path))
+                        {
+                            throw new InvalidOperationException();
+                        }
+
+                        path.Add(index);
+                        result = ((XmlElementSyntax) parent.GetElementByPath(path));
+                    }
+                    else
+                    {
+                        result = nextResult;
+                    }
                 }
 
-                if (child is not XmlElementSyntax syntax)
-                {
-                    continue;
-                }
+                return parent;
+            }
 
-                result = syntax;
-                return result;
+            return root.GetOrAddElementCore(name, out result).Node;
+        }
+
+        private static (XmlElementSyntax Node, bool Changed, int Index) GetOrAddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementSyntax result)
+        {
+            using (XmlElementEnumerator enumerator = root.Elements.GetEnumerator())
+            {
+                while (enumerator.MoveNext())
+                {
+                    XmlElementBaseSyntax child = enumerator.Current!;
+
+                    if (name.Equals(child.Name, StringComparison.Ordinal))
+                    {
+                        result = (XmlElementSyntax) child;
+                        return (result, false, enumerator.CurrentIndex);
+                    }
+                }
             }
 
             result = SyntaxFactory.XmlElement(
@@ -219,7 +254,9 @@ namespace Microsoft.Language.Xml
                 )
             );
 
-            return root.AddChild(ref result);
+            XmlElementSyntax newRoot = root.AddChild(result, out var index);
+            result = (XmlElementSyntax) newRoot.Content[index];
+            return (newRoot, true, index);
         }
     }
 }

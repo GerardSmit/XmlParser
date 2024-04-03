@@ -45,7 +45,7 @@ namespace Microsoft.Language.Xml.Tests
         }
 
         [Fact]
-        public void GetOrAddChildElementNested()
+        public void GetOrAddChildElementMultiple()
         {
             XmlElementBaseSyntax root = Parser.ParseText("<root></root>").Root;
 
@@ -55,6 +55,36 @@ namespace Microsoft.Language.Xml.Tests
             root = root.ReplaceNode(a, newA);
 
             Assert.Equal("<root><a><b></b></a></root>", root.ToFullString());
+        }
+
+        [Fact]
+        public void GetOrAddChildElement2()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root></root>").Root;
+
+            root = root.GetOrAddElement("a/b", out XmlElementSyntax a);
+
+            Assert.Equal("<root><a><b></b></a></root>", root.ToFullString());
+        }
+
+        [Fact]
+        public void GetOrAddChildElement3()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root></root>").Root;
+
+            root = root.GetOrAddElement("a/b/c", out XmlElementSyntax c);
+
+            Assert.Equal("<root><a><b><c></c></b></a></root>", root.ToFullString());
+        }
+
+        [Fact]
+        public void GetOrAddChildElement4()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root></root>").Root;
+
+            root = root.GetOrAddElement("a/b/c/d", out XmlElementSyntax d);
+
+            Assert.Equal("<root><a><b><c><d></d></c></b></a></root>", root.ToFullString());
         }
     }
 }
