@@ -4,7 +4,7 @@ using Microsoft.Language.Xml.Collections;
 
 namespace Microsoft.Language.Xml
 {
-    public abstract class XmlElementBaseSyntax : XmlNodeSyntax, IXmlElement
+    public abstract class XmlElementBaseSyntax : XmlNodeSyntax, INamedXmlNode
     {
         internal XmlElementBaseSyntax(Green green, SyntaxNode parent, int position) : base(green, parent, position)
         {
@@ -12,9 +12,8 @@ namespace Microsoft.Language.Xml
 
         public abstract string Name { get; }
         public abstract string Value { get; }
-
-        IEnumerable<KeyValuePair<string, string>> IXmlElement.Attributes => Attributes;
-
+        public abstract XmlNameSyntax NameNode { get; }
+        public abstract SyntaxList<SyntaxNode> Content { get; }
         public XmlElementBaseSyntax AsElement => this;
 
         public new XmlElementBaseSyntax Parent => (XmlElementBaseSyntax)base.Parent;
@@ -23,7 +22,13 @@ namespace Microsoft.Language.Xml
 
         public abstract SyntaxList<XmlAttributeSyntax> AttributesNode { get; }
 
-        protected abstract IXmlElementSyntax AsSyntaxElement { get; }
+        public IEnumerable<XmlAttributeSyntax> Attributes => AttributesNode;
+
+        public abstract XmlElementSyntax WithContent(SyntaxList<SyntaxNode> newContent);
+
+        protected internal abstract XmlElementBaseSyntax WithAttributes(SyntaxList<XmlAttributeSyntax> newAttributes);
+
+        protected internal abstract XmlElementBaseSyntax WithName(XmlNameSyntax newName);
 
         public XmlAttributeSyntax GetAttribute(string localName, string prefix = null)
         {
@@ -45,17 +50,5 @@ namespace Microsoft.Language.Xml
         }
 
         public string this[string attributeName] => GetAttributeValue(attributeName);
-
-        #region IXmlElement Members
-
-        IXmlElement IXmlElement.Parent => Parent;
-
-        IEnumerable<IXmlElement> IXmlElement.Elements => Elements;
-
-        IXmlElementSyntax IXmlElement.AsSyntaxElement => AsSyntaxElement;
-
-        public XmlAttributeEnumerator Attributes => new(AttributesNode);
-
-        #endregion
     }
 }

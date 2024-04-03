@@ -11,6 +11,13 @@ namespace Microsoft.Language.Xml
         public static readonly SyntaxTrivia CarriageReturnLineFeed = EndOfLineTrivia("\r\n");
         public static readonly SyntaxTrivia Space = WhitespaceTrivia(" ");
         public static readonly SyntaxTrivia Tab = WhitespaceTrivia("\t");
+        public static readonly PunctuationSyntax Equals = Punctuation(SyntaxKind.EqualsToken, "=", null, null);
+        public static readonly PunctuationSyntax DoubleQuote = Punctuation(SyntaxKind.DoubleQuoteToken, "\"", null, null);
+        public static readonly PunctuationSyntax SingleQuote = Punctuation(SyntaxKind.SingleQuoteToken, "'", null, null);
+        public static readonly PunctuationSyntax SlashGreaterThan = Punctuation(SyntaxKind.SlashGreaterThanToken, "/>", null, null);
+        public static readonly PunctuationSyntax GreaterThan = Punctuation(SyntaxKind.GreaterThanToken, ">", null, null);
+        public static readonly PunctuationSyntax LessThan = Punctuation(SyntaxKind.LessThanToken, "<", null, null);
+        public static readonly PunctuationSyntax LessThanSlash = Punctuation(SyntaxKind.LessThanSlashToken, "</", null, null);
 
         public static XmlDocumentSyntax XmlDocument(
             XmlDeclarationSyntax prologue,
@@ -134,7 +141,7 @@ namespace Microsoft.Language.Xml
             Debug.Assert(lessThanToken != null && lessThanToken.Kind == SyntaxKind.LessThanToken);
             Debug.Assert(name != null);
             Debug.Assert(greaterThanToken != null && greaterThanToken.Kind == SyntaxKind.GreaterThanToken);
-            return (XmlElementStartTagSyntax)new XmlElementStartTagSyntax.Green(lessThanToken?.GreenNode, name?.GreenNode, attributes?.GreenNode, greaterThanToken?.GreenNode).CreateRed();
+            return (XmlElementStartTagSyntax)new XmlElementStartTagSyntax.Green(lessThanToken?.GreenNode, name.GreenNode, attributes?.GreenNode, greaterThanToken.GreenNode).CreateRed();
         }
 
         public static XmlElementEndTagSyntax XmlElementEndTag(PunctuationSyntax lessThanSlashToken, XmlNameSyntax name, PunctuationSyntax greaterThanToken)

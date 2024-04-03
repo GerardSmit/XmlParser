@@ -7,7 +7,7 @@ namespace Microsoft.Language.Xml
 {
     using InternalSyntax;
 
-    public class XmlEmptyElementSyntax : XmlElementBaseSyntax, IXmlElementSyntax<XmlEmptyElementSyntax>, INamedXmlNode
+    public class XmlEmptyElementSyntax : XmlElementBaseSyntax, INamedXmlNode
     {
         internal new class Green : XmlNodeSyntax.Green
         {
@@ -85,9 +85,8 @@ namespace Microsoft.Language.Xml
         PunctuationSyntax slashGreaterThanToken;
 
         public PunctuationSyntax LessThanToken => GetRed(ref lessThanToken, 0);
-        public XmlNameSyntax NameNode => GetRed(ref nameNode, 1);
+        public override XmlNameSyntax NameNode => GetRed(ref nameNode, 1);
         public override SyntaxList<XmlAttributeSyntax> AttributesNode => new(GetRed(ref attributesNode, 2));
-        protected override IXmlElementSyntax AsSyntaxElement => this;
 
         public PunctuationSyntax SlashGreaterThanToken => GetRed(ref slashGreaterThanToken, 3);
 
@@ -128,29 +127,13 @@ namespace Microsoft.Language.Xml
 
         public override string Name => NameNode?.FullName;
 
-        public SyntaxList<SyntaxNode> Content => default(SyntaxList<SyntaxNode>);
+        public override SyntaxList<SyntaxNode> Content => default(SyntaxList<SyntaxNode>);
 
         public override string Value => "";
 
         public XmlElementEnumerator XmlElements => default;
 
         public override XmlElementEnumerator Elements => default;
-
-        #region IXmlElementSyntax
-
-        IEnumerable<XmlAttributeSyntax> IXmlElementSyntax.Attributes => AttributesNode;
-        XmlElementBaseSyntax IXmlElementSyntax.Parent => ParentElement;
-        XmlNodeSyntax IXmlElementSyntax.AsNode => this;
-
-        XmlElementBaseSyntax IXmlElementSyntax.WithAttributes(IEnumerable<XmlAttributeSyntax> newAttributes) => WithAttributes(new SyntaxList<XmlAttributeSyntax>(newAttributes));
-        XmlElementBaseSyntax IXmlElementSyntax.WithAttributes(SyntaxList<XmlAttributeSyntax> newAttributes) => WithAttributes(newAttributes);
-        XmlElementSyntax IXmlElementSyntax.WithContent(SyntaxList<SyntaxNode> newContent) => WithContent(newContent);
-        XmlElementBaseSyntax IXmlElementSyntax.WithName(XmlNameSyntax newName) => WithName(newName);
-        XmlEmptyElementSyntax IXmlElementSyntax<XmlEmptyElementSyntax>.WithName(XmlNameSyntax newName) => WithName(newName);
-        XmlEmptyElementSyntax IXmlElementSyntax<XmlEmptyElementSyntax>.WithAttributes(IEnumerable<XmlAttributeSyntax> newAttributes) => WithAttributes(new SyntaxList<XmlAttributeSyntax>(newAttributes));
-        XmlEmptyElementSyntax IXmlElementSyntax<XmlEmptyElementSyntax>.WithAttributes(SyntaxList<XmlAttributeSyntax> newAttributes) => WithAttributes(newAttributes);
-
-        #endregion
 
         public XmlEmptyElementSyntax Update(PunctuationSyntax lessThanToken, XmlNameSyntax name, SyntaxList<XmlAttributeSyntax> attributes, PunctuationSyntax slashGreaterThanToken)
         {
@@ -171,23 +154,23 @@ namespace Microsoft.Language.Xml
             return this.Update(lessThanToken, this.NameNode, this.AttributesNode, this.SlashGreaterThanToken);
         }
 
-        public XmlEmptyElementSyntax WithName(XmlNameSyntax name)
+        protected internal override XmlElementBaseSyntax WithName(XmlNameSyntax name)
         {
             return this.Update(this.LessThanToken, name, this.AttributesNode, this.SlashGreaterThanToken);
         }
 
-        public XmlEmptyElementSyntax WithAttributes(SyntaxList<XmlAttributeSyntax> attributes)
+        protected internal override XmlElementBaseSyntax WithAttributes(SyntaxList<XmlAttributeSyntax> attributes)
         {
             return this.Update(this.LessThanToken, this.NameNode, attributes, this.SlashGreaterThanToken);
         }
 
         // This method has to convert to an XmlElementSyntax
-        public XmlElementSyntax WithContent(SyntaxList<SyntaxNode> content)
+        public override XmlElementSyntax WithContent(SyntaxList<SyntaxNode> content)
         {
             var greaterThanToken = SyntaxFactory.Punctuation(SyntaxKind.GreaterThanToken, ">", null, null);
-            var startTag = SyntaxFactory.XmlElementStartTag(this.LessThanToken, this.NameNode, this.AttributesNode, greaterThanToken);
+            var startTag = SyntaxFactory.XmlElementStartTag(this.LessThanToken, this.NameNode.WithTrailingTrivia(), this.AttributesNode, greaterThanToken);
             var lessThanSlashToken = SyntaxFactory.Punctuation(SyntaxKind.LessThanSlashToken, "</", null, null);
-            var endTag = SyntaxFactory.XmlElementEndTag(lessThanSlashToken, this.NameNode, greaterThanToken);
+            var endTag = SyntaxFactory.XmlElementEndTag(lessThanSlashToken, this.NameNode.WithTrailingTrivia(), greaterThanToken);
             var newNode = SyntaxFactory.XmlElement(startTag, content, endTag);
             var annotations = this.GetAnnotations();
             if (annotations != null && annotations.Length > 0)
@@ -200,7 +183,7 @@ namespace Microsoft.Language.Xml
             return this.Update(this.LessThanToken, this.NameNode, this.AttributesNode, slashGreaterThanToken);
         }
 
-        public XmlEmptyElementSyntax AddAttributes(params XmlAttributeSyntax[] items)
+        public XmlElementBaseSyntax AddAttributes(params XmlAttributeSyntax[] items)
         {
             return this.WithAttributes(this.AttributesNode.AddRange(items));
         }

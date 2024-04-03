@@ -146,7 +146,7 @@ namespace Microsoft.Language.Xml
             }
         }
 
-        public IXmlElementSyntax RootSyntax => Body as IXmlElementSyntax;
+        public XmlElementBaseSyntax RootSyntax => Body as XmlElementBaseSyntax;
         public XmlElementBaseSyntax Root => RootSyntax.AsElement;
     }
 }

@@ -49,7 +49,7 @@ namespace Microsoft.Language.Xml.Tests
             element.HasAnnotation(annotation);
         }
 
-        private static void AssertAnnotation(IXmlElementSyntax element)
+        private static void AssertAnnotation(XmlElementBaseSyntax element)
         {
             AssertAnnotation((SyntaxNode)element);
         }

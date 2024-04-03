@@ -65,10 +65,10 @@ namespace Microsoft.Language.Xml.Tests
             var enumerator = document.Root.Attributes.GetEnumerator();
 
             Assert.True(enumerator.MoveNext());
-            Assert.Equal("b", enumerator.Current.Key);
+            Assert.Equal("b", enumerator.Current.Name);
 
             Assert.True(enumerator.MoveNext());
-            Assert.Equal("d", enumerator.Current.Key);
+            Assert.Equal("d", enumerator.Current.Name);
 
             Assert.False(enumerator.MoveNext());
         }

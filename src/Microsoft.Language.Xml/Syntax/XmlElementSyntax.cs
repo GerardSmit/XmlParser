@@ -7,7 +7,7 @@ namespace Microsoft.Language.Xml
 {
     using InternalSyntax;
 
-    public class XmlElementSyntax : XmlElementBaseSyntax, IXmlElementSyntax<XmlElementSyntax>, INamedXmlNode
+    public class XmlElementSyntax : XmlElementBaseSyntax
     {
         internal new class Green : XmlNodeSyntax.Green
         {
@@ -79,7 +79,7 @@ namespace Microsoft.Language.Xml
         XmlElementEndTagSyntax endTag;
 
         public XmlElementStartTagSyntax StartTag => GetRed(ref startTag, 0);
-        public SyntaxList<SyntaxNode> Content => new SyntaxList<SyntaxNode>(GetRed(ref content, 1));
+        public override SyntaxList<SyntaxNode> Content => new SyntaxList<SyntaxNode>(GetRed(ref content, 1));
         public XmlElementEndTagSyntax EndTag => GetRed(ref endTag, 2);
 
         internal XmlElementSyntax(Green green, SyntaxNode parent, int position)
@@ -115,7 +115,7 @@ namespace Microsoft.Language.Xml
             }
         }
 
-        public XmlNameSyntax NameNode => StartTag?.NameNode;
+        public override XmlNameSyntax NameNode => StartTag?.NameNode;
 
         public override string Name => StartTag?.Name;
 
@@ -125,26 +125,7 @@ namespace Microsoft.Language.Xml
 
         public override XmlElementEnumerator Elements => new(Content);
 
-        protected override IXmlElementSyntax AsSyntaxElement => this;
-
         public override SyntaxList<XmlAttributeSyntax> AttributesNode => StartTag?.AttributesNode ?? default;
-
-        #region IXmlElementSyntax
-
-        IEnumerable<XmlAttributeSyntax> IXmlElementSyntax.Attributes => StartTag?.AttributesNode;
-        XmlElementBaseSyntax IXmlElementSyntax.Parent => ParentElement;
-        XmlNodeSyntax IXmlElementSyntax.AsNode => this;
-        SyntaxList<XmlAttributeSyntax> IXmlElementSyntax.AttributesNode => StartTag.AttributesNode;
-        XmlElementBaseSyntax IXmlElementSyntax.WithAttributes(IEnumerable<XmlAttributeSyntax> newAttributes) => WithStartTag(StartTag.WithAttributes(new SyntaxList<XmlAttributeSyntax>(newAttributes)));
-        XmlElementBaseSyntax IXmlElementSyntax.WithAttributes(SyntaxList<XmlAttributeSyntax> newAttributes) => WithStartTag(StartTag.WithAttributes(newAttributes));
-        XmlElementSyntax IXmlElementSyntax.WithContent(SyntaxList<SyntaxNode> newContent) => WithContent(newContent);
-        XmlElementBaseSyntax IXmlElementSyntax.WithName(XmlNameSyntax newName) => WithStartTag(StartTag.WithName(newName));
-
-        XmlElementSyntax IXmlElementSyntax<XmlElementSyntax>.WithName(XmlNameSyntax newName) => WithStartTag(StartTag.WithName(newName));
-        XmlElementSyntax IXmlElementSyntax<XmlElementSyntax>.WithAttributes(IEnumerable<XmlAttributeSyntax> newAttributes) => WithStartTag(StartTag.WithAttributes(new SyntaxList<XmlAttributeSyntax>(newAttributes)));
-        XmlElementSyntax IXmlElementSyntax<XmlElementSyntax>.WithAttributes(SyntaxList<XmlAttributeSyntax> newAttributes) => WithStartTag(StartTag.WithAttributes(newAttributes));
-
-        #endregion
 
         public XmlElementSyntax Update(XmlElementStartTagSyntax startTag, SyntaxList<SyntaxNode> content, XmlElementEndTagSyntax endTag)
         {
@@ -165,9 +146,19 @@ namespace Microsoft.Language.Xml
             return this.Update(startTag, this.Content, this.EndTag);
         }
 
-        public XmlElementSyntax WithContent(SyntaxList<SyntaxNode> content)
+        public override XmlElementSyntax WithContent(SyntaxList<SyntaxNode> content)
         {
             return this.Update(this.StartTag, content, this.EndTag);
+        }
+
+        protected internal override XmlElementBaseSyntax WithAttributes(SyntaxList<XmlAttributeSyntax> newAttributes)
+        {
+            return this.WithStartTag(this.StartTag.WithAttributes(newAttributes));
+        }
+
+        protected internal override XmlElementBaseSyntax WithName(XmlNameSyntax newName)
+        {
+            return this.WithStartTag(this.StartTag.WithName(newName));
         }
 
         public XmlElementSyntax WithEndTag(XmlElementEndTagSyntax endTag)
@@ -184,19 +175,5 @@ namespace Microsoft.Language.Xml
         {
             return this.WithContent(this.Content.AddRange(items));
         }
-
-        /*public override SyntaxNode WithLeadingTrivia(SyntaxNode trivia)
-        {
-            return new XmlElementSyntax((XmlElementStartTagSyntax)StartTag.WithLeadingTrivia(trivia),
-                                        Content,
-                                        EndTag);
-        }
-
-        public override SyntaxNode WithTrailingTrivia(SyntaxNode trivia)
-        {
-            return new XmlElementSyntax(StartTag,
-                                        Content,
-                                        (XmlElementEndTagSyntax)EndTag.WithTrailingTrivia(trivia));
-        }*/
     }
 }

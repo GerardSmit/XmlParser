@@ -36,7 +36,7 @@ namespace Microsoft.Language.Xml.Tests
         [Fact]
         public void TestXmlAttributeSyntaxLeadingTrivia ()
         {
-            var element = (IXmlElementSyntax)GetElementSyntax (XmlElementWithAttributeAndContent);
+            var element = GetElementSyntax (XmlElementWithAttributeAndContent);
             var attribute = element.Attributes.First();
             var attributeWithTrivia = attribute.WithLeadingTrivia(SyntaxFactory.WhitespaceTrivia(ThreeSpaces));
             Assert.NotSame (attributeWithTrivia, attribute);
@@ -47,7 +47,7 @@ namespace Microsoft.Language.Xml.Tests
         [Fact]
         public void TestXmlAttributeSyntaxLeadingTrivia_2TriviaNodes ()
         {
-            var element = (IXmlElementSyntax)GetElementSyntax (XmlElementWithNamespacedAttributeAndContent);
+            var element = GetElementSyntax (XmlElementWithNamespacedAttributeAndContent);
             var attribute = element.Attributes.First ();
             var attributeWithTrivia = attribute.WithLeadingTrivia (
                 SyntaxFactory.WhitespaceTrivia (Tab),

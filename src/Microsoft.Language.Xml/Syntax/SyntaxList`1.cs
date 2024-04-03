@@ -185,6 +185,17 @@ namespace Microsoft.Language.Xml
         }
 
         /// <summary>
+        /// Creates a new list with the specified node added at the end.
+        /// </summary>
+        /// <param name="node">The node to add.</param>
+        /// <param name="index">The index of the added node.</param>
+        public SyntaxList<TNode> Add(TNode node, out int index)
+        {
+            index = this.Count;
+            return Insert(index, node);
+        }
+
+        /// <summary>
         /// Creates a new list with the specified nodes added at the end.
         /// </summary>
         /// <param name="nodes">The nodes to add.</param>

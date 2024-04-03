@@ -281,12 +281,13 @@ namespace Microsoft.Language.Xml
         {
             get
             {
-                var current = this.Parent;
+                SyntaxNode current = Parent;
+
                 while (current != null)
                 {
-                    if (current.IsElement())
+                    if (current is XmlElementBaseSyntax element)
                     {
-                        return (XmlElementBaseSyntax)current;
+                        return element;
                     }
 
                     current = current.Parent;

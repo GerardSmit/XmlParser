@@ -10,7 +10,7 @@ namespace Microsoft.Language.Xml.Tests
         {
             var root = Parser.ParseText ("<a/>")?.RootSyntax;
             var content = Parser.ParseText ("<b />")?.RootSyntax;
-            root = root.WithContent (SyntaxFactory.SingletonList (content.AsNode));
+            root = root.WithContent (SyntaxFactory.SingletonList (content));
             Assert.Equal("<a><b /></a>", root.ToFullString());
         }
 
@@ -19,7 +19,7 @@ namespace Microsoft.Language.Xml.Tests
         {
             var root = Parser.ParseText("<a b=\"c\"/>")?.RootSyntax;
             var content = Parser.ParseText("<d />")?.RootSyntax;
-            root = root.WithContent(SyntaxFactory.SingletonList(content.AsNode));
+            root = root.WithContent(SyntaxFactory.SingletonList(content));
             Assert.Equal("<a b=\"c\"><d /></a >", root.ToFullString());
         }
     }
