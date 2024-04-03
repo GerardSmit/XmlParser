@@ -8,11 +8,11 @@ namespace Microsoft.Language.Xml
     {
         internal static SyntaxNode Replace<TNode>(
             SyntaxNode root,
-            IEnumerable<TNode> nodes = null,
+            in SyntaxList<TNode> nodes = default,
             Func<TNode, TNode, SyntaxNode> computeReplacementNode = null,
-            IEnumerable<SyntaxToken> tokens = null,
+            in SyntaxList<SyntaxToken> tokens = default,
             Func<SyntaxToken, SyntaxToken, SyntaxToken> computeReplacementToken = null,
-            IEnumerable<SyntaxTrivia> trivia = null,
+            in SyntaxList<SyntaxTrivia> trivia = default,
             Func<SyntaxTrivia, SyntaxTrivia, SyntaxTrivia> computeReplacementTrivia = null)
             where TNode : SyntaxNode
         {
@@ -33,11 +33,11 @@ namespace Microsoft.Language.Xml
 
         internal static SyntaxToken Replace(
             SyntaxToken root,
-            IEnumerable<SyntaxNode> nodes = null,
+            in SyntaxList<SyntaxNode> nodes = default,
             Func<SyntaxNode, SyntaxNode, SyntaxNode> computeReplacementNode = null,
-            IEnumerable<SyntaxToken> tokens = null,
+            in SyntaxList<SyntaxToken> tokens = default,
             Func<SyntaxToken, SyntaxToken, SyntaxToken> computeReplacementToken = null,
-            IEnumerable<SyntaxTrivia> trivia = null,
+            in SyntaxList<SyntaxTrivia> trivia = default,
             Func<SyntaxTrivia, SyntaxTrivia, SyntaxTrivia> computeReplacementTrivia = null)
         {
             var replacer = new Replacer<SyntaxNode>(
@@ -61,43 +61,57 @@ namespace Microsoft.Language.Xml
             private readonly Func<SyntaxToken, SyntaxToken, SyntaxToken> _computeReplacementToken;
             private readonly Func<SyntaxTrivia, SyntaxTrivia, SyntaxTrivia> _computeReplacementTrivia;
 
-            private readonly HashSet<SyntaxNode> _nodeSet;
-            private readonly HashSet<SyntaxToken> _tokenSet;
-            private readonly HashSet<SyntaxTrivia> _triviaSet;
+            private readonly SyntaxList<SyntaxNode> _nodeSet;
+            private readonly SyntaxList<SyntaxToken> _tokenSet;
+            private readonly SyntaxList<SyntaxTrivia> _triviaSet;
             private readonly HashSet<TextSpan> _spanSet;
 
             private readonly TextSpan _totalSpan;
             private readonly bool _shouldVisitTrivia;
 
             public Replacer(
-                IEnumerable<TNode> nodes,
+                in SyntaxList<TNode> nodes,
                 Func<TNode, TNode, SyntaxNode> computeReplacementNode,
-                IEnumerable<SyntaxToken> tokens,
+                in SyntaxList<SyntaxToken> tokens,
                 Func<SyntaxToken, SyntaxToken, SyntaxToken> computeReplacementToken,
-                IEnumerable<SyntaxTrivia> trivia,
+                in SyntaxList<SyntaxTrivia> trivia,
                 Func<SyntaxTrivia, SyntaxTrivia, SyntaxTrivia> computeReplacementTrivia)
             {
                 _computeReplacementNode = computeReplacementNode;
                 _computeReplacementToken = computeReplacementToken;
                 _computeReplacementTrivia = computeReplacementTrivia;
 
-                _nodeSet = nodes != null ? new HashSet<SyntaxNode>(nodes) : s_noNodes;
-                _tokenSet = tokens != null ? new HashSet<SyntaxToken>(tokens) : s_noTokens;
-                _triviaSet = trivia != null ? new HashSet<SyntaxTrivia>(trivia) : s_noTrivia;
+                _nodeSet = nodes;
+                _tokenSet = tokens;
+                _triviaSet = trivia;
 
-                _spanSet = new HashSet<TextSpan>(
-                    _nodeSet.Select(n => n.FullSpan).Concat(
-                    _tokenSet.Select(t => t.FullSpan).Concat(
-                    _triviaSet.Select(t => t.FullSpan))));
-
+                _spanSet = GetSpanSet(nodes, tokens, trivia);
                 _totalSpan = ComputeTotalSpan(_spanSet);
 
                 _shouldVisitTrivia = _triviaSet.Count > 0;
             }
 
-            private static readonly HashSet<SyntaxNode> s_noNodes = new HashSet<SyntaxNode>();
-            private static readonly HashSet<SyntaxToken> s_noTokens = new HashSet<SyntaxToken>();
-            private static readonly HashSet<SyntaxTrivia> s_noTrivia = new HashSet<SyntaxTrivia>();
+            private static HashSet<TextSpan> GetSpanSet(in SyntaxList<TNode> nodes, in SyntaxList<SyntaxToken> tokens, in SyntaxList<SyntaxTrivia> trivia)
+            {
+                var set = new HashSet<TextSpan>();
+
+                foreach (TNode n in nodes)
+                {
+                    set.Add(n.FullSpan);
+                }
+
+                foreach (SyntaxToken t in tokens)
+                {
+                    set.Add(t.FullSpan);
+                }
+
+                foreach (SyntaxTrivia t in trivia)
+                {
+                    set.Add(t.FullSpan);
+                }
+
+                return set;
+            }
 
             public bool HasWork
             {

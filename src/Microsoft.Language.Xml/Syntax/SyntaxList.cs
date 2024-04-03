@@ -16,7 +16,7 @@ namespace Microsoft.Language.Xml
             return visitor.Visit(this);
         }
 
-        protected internal override SyntaxNode ReplaceCore<TNode>(IEnumerable<TNode> nodes = null, Func<TNode, TNode, SyntaxNode> computeReplacementNode = null, IEnumerable<SyntaxToken> tokens = null, Func<SyntaxToken, SyntaxToken, SyntaxToken> computeReplacementToken = null, IEnumerable<SyntaxTrivia> trivia = null, Func<SyntaxTrivia, SyntaxTrivia, SyntaxTrivia> computeReplacementTrivia = null)
+        protected internal override SyntaxNode ReplaceCore<TNode>(in SyntaxList<TNode> nodes = default, Func<TNode, TNode, SyntaxNode> computeReplacementNode = null, in SyntaxList<SyntaxToken> tokens = default, Func<SyntaxToken, SyntaxToken, SyntaxToken> computeReplacementToken = null, in SyntaxList<SyntaxTrivia> trivia = default, Func<SyntaxTrivia, SyntaxTrivia, SyntaxTrivia> computeReplacementTrivia = null)
         {
             throw new InvalidOperationException();
         }

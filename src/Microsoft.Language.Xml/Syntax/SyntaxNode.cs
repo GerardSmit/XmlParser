@@ -155,37 +155,37 @@ namespace Microsoft.Language.Xml
         /// Creates a new tree of nodes with the specified nodes, tokens or trivia replaced.
         /// </summary>
         protected internal virtual SyntaxNode ReplaceCore<TNode>(
-            IEnumerable<TNode> nodes = null,
+            in SyntaxList<TNode> nodes = default,
             Func<TNode, TNode, SyntaxNode> computeReplacementNode = null,
-            IEnumerable<SyntaxToken> tokens = null,
+            in SyntaxList<SyntaxToken> tokens = default,
             Func<SyntaxToken, SyntaxToken, SyntaxToken> computeReplacementToken = null,
-            IEnumerable<SyntaxTrivia> trivia = null,
+            in SyntaxList<SyntaxTrivia> trivia = default,
             Func<SyntaxTrivia, SyntaxTrivia, SyntaxTrivia> computeReplacementTrivia = null) where TNode : SyntaxNode
         {
             return SyntaxReplacer.Replace(this, nodes, computeReplacementNode, tokens, computeReplacementToken, trivia, computeReplacementTrivia);
         }
 
-        protected internal virtual SyntaxNode ReplaceNodeInListCore(SyntaxNode originalNode, IEnumerable<SyntaxNode> replacementNodes)
+        protected internal virtual SyntaxNode ReplaceNodeInListCore(SyntaxNode originalNode, SyntaxList<SyntaxNode> replacementNodes)
         {
             return SyntaxReplacer.ReplaceNodeInList(this, originalNode, replacementNodes);
         }
 
-        protected internal virtual SyntaxNode InsertNodesInListCore(SyntaxNode nodeInList, IEnumerable<SyntaxNode> nodesToInsert, bool insertBefore)
+        protected internal virtual SyntaxNode InsertNodesInListCore(SyntaxNode nodeInList, SyntaxList<SyntaxNode> nodesToInsert, bool insertBefore)
         {
             return SyntaxReplacer.InsertNodeInList(this, nodeInList, nodesToInsert, insertBefore);
         }
 
-        protected internal virtual SyntaxNode ReplaceTokenInListCore(SyntaxToken originalToken, IEnumerable<SyntaxToken> newTokens)
+        protected internal virtual SyntaxNode ReplaceTokenInListCore(SyntaxToken originalToken, SyntaxList<SyntaxToken> newTokens)
         {
             return SyntaxReplacer.ReplaceTokenInList(this, originalToken, newTokens);
         }
 
-        protected internal virtual SyntaxNode InsertTokensInListCore(SyntaxToken originalToken, IEnumerable<SyntaxToken> newTokens, bool insertBefore)
+        protected internal virtual SyntaxNode InsertTokensInListCore(SyntaxToken originalToken, SyntaxList<SyntaxToken> newTokens, bool insertBefore)
         {
             return SyntaxReplacer.InsertTokenInList(this, originalToken, newTokens, insertBefore);
         }
 
-        protected internal virtual SyntaxNode RemoveNodesCore(IEnumerable<SyntaxNode> nodes, SyntaxRemoveOptions options)
+        protected internal virtual SyntaxNode RemoveNodesCore(SyntaxList<SyntaxNode> nodes, SyntaxRemoveOptions options)
         {
             return SyntaxNodeRemover.RemoveNodes(this, nodes, options);
         }

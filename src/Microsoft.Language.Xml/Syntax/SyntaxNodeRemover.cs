@@ -6,12 +6,11 @@ namespace Microsoft.Language.Xml
 {
     public class SyntaxNodeRemover
     {
-        internal static TRoot RemoveNodes<TRoot>(TRoot root, IEnumerable<SyntaxNode> nodes, SyntaxRemoveOptions options) where TRoot : SyntaxNode
+        internal static TRoot RemoveNodes<TRoot>(TRoot root, SyntaxList<SyntaxNode> nodes, SyntaxRemoveOptions options) where TRoot : SyntaxNode
         {
-            SyntaxNode[] nodesToRemove = nodes.ToArray();
-            if (nodesToRemove.Length == 0)
+            if (nodes.Count == 0)
                 return root;
-            var remover = new SyntaxRemover(nodes.ToArray(), options);
+            var remover = new SyntaxRemover(nodes, options);
             var result = remover.Visit(root);
             var residualTrivia = remover.ResidualTrivia;
             if (residualTrivia.Count > 0)
@@ -21,27 +20,26 @@ namespace Microsoft.Language.Xml
 
         private class SyntaxRemover : SyntaxRewriter
         {
-            private readonly HashSet<SyntaxNode> _nodesToRemove;
+            private readonly SyntaxList<SyntaxNode> _nodesToRemove;
             private readonly SyntaxRemoveOptions _options;
             private readonly TextSpan _searchSpan;
             private readonly SyntaxTriviaListBuilder _residualTrivia;
-            private HashSet<SyntaxNode> _directivesToKeep;
 
-            public SyntaxRemover(SyntaxNode[] nodes, SyntaxRemoveOptions options)
+            public SyntaxRemover(SyntaxList<SyntaxNode> nodes, SyntaxRemoveOptions options)
             {
-                this._nodesToRemove = new HashSet<SyntaxNode>(nodes);
+                this._nodesToRemove = nodes;
                 this._options = options;
                 this._searchSpan = ComputeTotalSpan(nodes);
                 this._residualTrivia = null;
             }
 
-            private static TextSpan ComputeTotalSpan(SyntaxNode[] nodes)
+            private static TextSpan ComputeTotalSpan(SyntaxList<SyntaxNode> nodes)
             {
                 var span0 = nodes[0].FullSpan;
                 int start = span0.Start;
                 int end = span0.End;
                 int i = 1;
-                while (i < nodes.Length)
+                while (i < nodes.Count)
                 {
                     var span = nodes[i].FullSpan;
                     start = Math.Min(start, span.Start);

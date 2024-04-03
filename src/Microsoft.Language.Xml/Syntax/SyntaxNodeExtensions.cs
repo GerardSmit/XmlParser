@@ -25,11 +25,11 @@ namespace Microsoft.Language.Xml
         /// the same trivia with potentially rewritten sub structure.</param>
         public static TRoot ReplaceSyntax<TRoot>(
             this TRoot root,
-            IEnumerable<SyntaxNode> nodes,
+            in SyntaxList<SyntaxNode> nodes,
             Func<SyntaxNode, SyntaxNode, SyntaxNode> computeReplacementNode,
-            IEnumerable<SyntaxToken> tokens,
+            in SyntaxList<SyntaxToken> tokens,
             Func<SyntaxToken, SyntaxToken, SyntaxToken> computeReplacementToken,
-            IEnumerable<SyntaxTrivia> trivia,
+            in SyntaxList<SyntaxTrivia> trivia,
             Func<SyntaxTrivia, SyntaxTrivia, SyntaxTrivia> computeReplacementTrivia)
             where TRoot : SyntaxNode
         {
@@ -49,7 +49,7 @@ namespace Microsoft.Language.Xml
         /// <param name="computeReplacementNode">A function that computes a replacement node for the
         /// argument nodes. The first argument is the original node. The second argument is the same
         /// node potentially rewritten with replaced descendants.</param>
-        public static TRoot ReplaceNodes<TRoot, TNode>(this TRoot root, IEnumerable<TNode> nodes, Func<TNode, TNode, SyntaxNode> computeReplacementNode)
+        public static TRoot ReplaceNodes<TRoot, TNode>(this TRoot root, in SyntaxList<TNode> nodes, Func<TNode, TNode, SyntaxNode> computeReplacementNode)
             where TRoot : SyntaxNode
             where TNode : SyntaxNode
         {
@@ -71,7 +71,7 @@ namespace Microsoft.Language.Xml
                 return root;
             }
 
-            return (TRoot)root.ReplaceCore(nodes: new[] { oldNode }, computeReplacementNode: (o, r) => newNode);
+            return (TRoot)root.ReplaceCore(nodes: new SyntaxList<SyntaxNode>(oldNode), computeReplacementNode: (o, r) => newNode);
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace Microsoft.Language.Xml
         /// <param name="root">The root of the tree of nodes.</param>
         /// <param name="oldNode">The node to be replaced; a descendant of the root node and an element of a list member.</param>
         /// <param name="newNodes">A sequence of nodes to use in the tree in place of the old node.</param>
-        public static TRoot ReplaceNode<TRoot>(this TRoot root, SyntaxNode oldNode, IEnumerable<SyntaxNode> newNodes)
+        public static TRoot ReplaceNode<TRoot>(this TRoot root, SyntaxNode oldNode, in SyntaxList<SyntaxNode> newNodes)
             where TRoot : SyntaxNode
         {
             return (TRoot)root.ReplaceNodeInListCore(oldNode, newNodes);
@@ -94,7 +94,7 @@ namespace Microsoft.Language.Xml
         /// <param name="root">The root of the tree of nodes.</param>
         /// <param name="nodeInList">The node to insert before; a descendant of the root node an element of a list member.</param>
         /// <param name="newNodes">A sequence of nodes to insert into the tree immediately before the specified node.</param>
-        public static TRoot InsertNodesBefore<TRoot>(this TRoot root, SyntaxNode nodeInList, IEnumerable<SyntaxNode> newNodes)
+        public static TRoot InsertNodesBefore<TRoot>(this TRoot root, SyntaxNode nodeInList, in SyntaxList<SyntaxNode> newNodes)
             where TRoot : SyntaxNode
         {
             return (TRoot)root.InsertNodesInListCore(nodeInList, newNodes, insertBefore: true);
@@ -107,7 +107,7 @@ namespace Microsoft.Language.Xml
         /// <param name="root">The root of the tree of nodes.</param>
         /// <param name="nodeInList">The node to insert after; a descendant of the root node an element of a list member.</param>
         /// <param name="newNodes">A sequence of nodes to insert into the tree immediately after the specified node.</param>
-        public static TRoot InsertNodesAfter<TRoot>(this TRoot root, SyntaxNode nodeInList, IEnumerable<SyntaxNode> newNodes)
+        public static TRoot InsertNodesAfter<TRoot>(this TRoot root, SyntaxNode nodeInList, in SyntaxList<SyntaxNode> newNodes)
             where TRoot : SyntaxNode
         {
             return (TRoot)root.InsertNodesInListCore(nodeInList, newNodes, insertBefore: false);
@@ -124,7 +124,7 @@ namespace Microsoft.Language.Xml
         public static TRoot ReplaceToken<TRoot>(this TRoot root, SyntaxToken oldToken, SyntaxToken newToken)
             where TRoot : SyntaxNode
         {
-            return (TRoot)root.ReplaceCore<SyntaxNode>(tokens: new[] { oldToken }, computeReplacementToken: (o, r) => newToken);
+            return (TRoot)root.ReplaceCore<SyntaxNode>(tokens: new SyntaxList<SyntaxToken>(oldToken), computeReplacementToken: (o, r) => newToken);
         }
 
         /// <summary>
@@ -134,7 +134,7 @@ namespace Microsoft.Language.Xml
         /// <param name="root">The root of the tree of nodes.</param>
         /// <param name="tokenInList">The token to insert before; a descendant of the root node and an element of a list member.</param>
         /// <param name="newTokens">A sequence of tokens to insert into the tree immediately before the specified token.</param>
-        public static TRoot InsertTokensBefore<TRoot>(this TRoot root, SyntaxToken tokenInList, IEnumerable<SyntaxToken> newTokens)
+        public static TRoot InsertTokensBefore<TRoot>(this TRoot root, SyntaxToken tokenInList, in SyntaxList<SyntaxToken> newTokens)
             where TRoot : SyntaxNode
         {
             return (TRoot)root.InsertTokensInListCore(tokenInList, newTokens, insertBefore: true);
@@ -147,7 +147,7 @@ namespace Microsoft.Language.Xml
         /// <param name="root">The root of the tree of nodes.</param>
         /// <param name="tokenInList">The token to insert after; a descendant of the root node and an element of a list member.</param>
         /// <param name="newTokens">A sequence of tokens to insert into the tree immediately after the specified token.</param>
-        public static TRoot InsertTokensAfter<TRoot>(this TRoot root, SyntaxToken tokenInList, IEnumerable<SyntaxToken> newTokens)
+        public static TRoot InsertTokensAfter<TRoot>(this TRoot root, SyntaxToken tokenInList, in SyntaxList<SyntaxToken> newTokens)
             where TRoot : SyntaxNode
         {
             return (TRoot)root.InsertTokensInListCore(tokenInList, newTokens, insertBefore: false);
@@ -202,7 +202,7 @@ namespace Microsoft.Language.Xml
         /// <param name="computeReplacementToken">A function that computes a replacement token for
         /// the argument tokens. The first argument is the original token. The second argument is
         /// the same token potentially rewritten with replaced trivia.</param>
-        public static TRoot ReplaceTokens<TRoot>(this TRoot root, IEnumerable<SyntaxToken> tokens, Func<SyntaxToken, SyntaxToken, SyntaxToken> computeReplacementToken)
+        public static TRoot ReplaceTokens<TRoot>(this TRoot root, in SyntaxList<SyntaxToken> tokens, Func<SyntaxToken, SyntaxToken, SyntaxToken> computeReplacementToken)
             where TRoot : SyntaxNode
         {
             return (TRoot)root.ReplaceCore<SyntaxNode>(tokens: tokens, computeReplacementToken: computeReplacementToken);
@@ -217,7 +217,7 @@ namespace Microsoft.Language.Xml
         /// <param name="computeReplacementTrivia">A function that computes replacement trivia for
         /// the specified arguments. The first argument is the original trivia. The second argument is
         /// the same trivia with potentially rewritten sub structure.</param>
-        public static TRoot ReplaceTrivia<TRoot>(this TRoot root, IEnumerable<SyntaxTrivia> trivia, Func<SyntaxTrivia, SyntaxTrivia, SyntaxTrivia> computeReplacementTrivia)
+        public static TRoot ReplaceTrivia<TRoot>(this TRoot root, in SyntaxList<SyntaxTrivia> trivia, Func<SyntaxTrivia, SyntaxTrivia, SyntaxTrivia> computeReplacementTrivia)
             where TRoot : SyntaxNode
         {
             return (TRoot)root.ReplaceCore<SyntaxNode>(trivia: trivia, computeReplacementTrivia: computeReplacementTrivia);
@@ -233,7 +233,7 @@ namespace Microsoft.Language.Xml
         public static TRoot ReplaceTrivia<TRoot>(this TRoot root, SyntaxTrivia trivia, SyntaxTrivia newTrivia)
             where TRoot : SyntaxNode
         {
-            return (TRoot)root.ReplaceCore<SyntaxNode>(trivia: new[] { trivia }, computeReplacementTrivia: (o, r) => newTrivia);
+            return (TRoot)root.ReplaceCore<SyntaxNode>(trivia: new SyntaxList<SyntaxTrivia>(trivia), computeReplacementTrivia: (o, r) => newTrivia);
         }
 
         /// <summary>
@@ -248,7 +248,7 @@ namespace Microsoft.Language.Xml
             SyntaxRemoveOptions options)
             where TRoot : SyntaxNode
         {
-            return (TRoot)root.RemoveNodesCore(new[] { node }, options);
+            return (TRoot)root.RemoveNodesCore(new SyntaxList<SyntaxNode>(node), options);
         }
 
         /// <summary>
@@ -260,7 +260,7 @@ namespace Microsoft.Language.Xml
         /// <param name="options">Options that determine how the nodes' trivia is treated.</param>
         public static TRoot RemoveNodes<TRoot>(
             this TRoot root,
-            IEnumerable<SyntaxNode> nodes,
+            in SyntaxList<SyntaxNode> nodes,
             SyntaxRemoveOptions options)
             where TRoot : SyntaxNode
         {
@@ -459,24 +459,24 @@ namespace Microsoft.Language.Xml
 
         /// <summary>
         /// create a new root node from the given root after adding annotations to the tokens
-        /// 
+        ///
         /// tokens should belong to the given root
         /// </summary>
         public static SyntaxNode AddAnnotations(this SyntaxNode root, IEnumerable<Tuple<SyntaxToken, SyntaxAnnotation>> pairs)
         {
             var tokenMap = pairs.GroupBy(p => p.Item1, p => p.Item2).ToDictionary(g => g.Key, g => g.ToArray());
-            return root.ReplaceTokens(tokenMap.Keys, (o, n) => o.WithAdditionalAnnotations(tokenMap[o]));
+            return root.ReplaceTokens(new SyntaxList<SyntaxNode>(tokenMap.Keys), (o, n) => o.WithAdditionalAnnotations(tokenMap[o]));
         }
 
         /// <summary>
         /// create a new root node from the given root after adding annotations to the nodes
-        /// 
+        ///
         /// nodes should belong to the given root
         /// </summary>
         public static SyntaxNode AddAnnotations(this SyntaxNode root, IEnumerable<Tuple<SyntaxNode, SyntaxAnnotation>> pairs)
         {
             var tokenMap = pairs.GroupBy(p => p.Item1, p => p.Item2).ToDictionary(g => g.Key, g => g.ToArray());
-            return root.ReplaceNodes(tokenMap.Keys, (o, n) => o.WithAdditionalAnnotations(tokenMap[o]));
+            return root.ReplaceNodes(new SyntaxList<SyntaxNode>(tokenMap.Keys), (o, n) => o.WithAdditionalAnnotations(tokenMap[o]));
         }
 
         public static IEnumerable<T> GetAnnotatedNodes<T>(this SyntaxNode node, SyntaxAnnotation syntaxAnnotation) where T : SyntaxNode

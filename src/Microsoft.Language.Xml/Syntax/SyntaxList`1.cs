@@ -44,8 +44,9 @@ namespace Microsoft.Language.Xml
                 return null;
             }
 
-            var collection = nodes as ICollection<TNode>;
-            var builder = (collection != null) ? new SyntaxListBuilder<TNode>(collection.Count) : SyntaxListBuilder<TNode>.Create();
+            SyntaxListBuilder<TNode> builder = (nodes is ICollection<TNode> collection)
+                ? new SyntaxListBuilder<TNode>(collection.Count)
+                : SyntaxListBuilder<TNode>.Create();
 
             foreach (TNode node in nodes)
             {
@@ -465,6 +466,24 @@ namespace Microsoft.Language.Xml
             }
 
             return -1;
+        }
+
+        public bool Contains(TNode node)
+        {
+            if (node == null)
+            {
+                return false;
+            }
+
+            foreach (TNode child in this)
+            {
+                if (object.Equals(child, node))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public int IndexOf(Func<TNode, bool> predicate)
