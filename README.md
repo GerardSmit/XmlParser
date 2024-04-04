@@ -1,7 +1,7 @@
 # XmlParser
 
 > [!NOTE]  
-> This is a fork of the 'GuiLabs.Language.Xml' project. See [KirillOsenkov/XmlParser](https://github.com/KirillOsenkov/XmlParser) for the original project. This project is not affiliated with the original project (the namespace and the project name for drop-in replacement).
+> This is a fork of the 'GuiLabs.Language.Xml' project. See [KirillOsenkov/XmlParser](https://github.com/KirillOsenkov/XmlParser) for the original project. This project is not affiliated with the original project (the namespace and the project name are the same for compatibility reasons).
 
 ## Changes
 In comparison to the original project, this fork has the following changes:
