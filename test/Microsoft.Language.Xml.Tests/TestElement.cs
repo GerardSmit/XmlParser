@@ -1,4 +1,5 @@
 using Xunit;
+using static Microsoft.Language.Xml.SyntaxFactory;
 
 namespace Microsoft.Language.Xml.Tests
 {
@@ -222,6 +223,58 @@ namespace Microsoft.Language.Xml.Tests
                         </b>
                     </a>
                 </root>
+                """, root.ToFullString());
+        }
+
+        [Fact]
+        public void XDocumentLike()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText(
+                """
+                <configuration>
+                    <system.webServer>
+                        <rewrite>
+                            <rules>
+                            </rules>
+                        </rewrite>
+                    </system.webServer>
+                </configuration>
+                """
+                ).Root;
+
+            root = root.GetOrAddElement("system.webServer/rewrite/rules", out XmlElementBaseSyntax rules);
+
+            root = root.ReplaceNode(
+                rules,
+                rules.AddChild(XmlElement(
+                    "rule",
+                    XmlAttribute("name", "rule1"),
+                    XmlAttribute("enabled", "true"),
+                    XmlElement("match",
+                        XmlAttribute("url", "pattern"),
+                        XmlAttribute("negate", "false")
+                    ),
+                    XmlElement("action",
+                        XmlAttribute("type", "Rewrite"),
+                        XmlAttribute("url", "http://example.com")
+                    )
+                ).NormalizeTrivia(rules))
+            );
+
+            Assert.Equal(
+                """
+                <configuration>
+                    <system.webServer>
+                        <rewrite>
+                            <rules>
+                                <rule name="rule1" enabled="true">
+                                    <match url="pattern" negate="false" />
+                                    <action type="Rewrite" url="http://example.com" />
+                                </rule>
+                            </rules>
+                        </rewrite>
+                    </system.webServer>
+                </configuration>
                 """, root.ToFullString());
         }
     }

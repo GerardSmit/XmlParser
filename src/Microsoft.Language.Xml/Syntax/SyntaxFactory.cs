@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Xml;
@@ -264,6 +265,89 @@ namespace Microsoft.Language.Xml
             return (XmlAttributeSyntax)new XmlAttributeSyntax.Green(name?.GreenNode, equals?.GreenNode, value?.GreenNode).CreateRed();
         }
 
+        public static XmlElementBaseSyntax XmlElement(string name, params object[] content)
+        {
+            var attributes = SyntaxListBuilder<XmlAttributeSyntax>.Create();
+            var children = SyntaxListBuilder<XmlNodeSyntax>.Create();
+
+            AddItems(content, ref attributes, ref children);
+
+            if (children.Count == 0)
+            {
+                return XmlEmptyElement(
+                    LessThan,
+                    XmlName(null, XmlNameToken(name, null, Space)),
+                    attributes.ToList(),
+                    Punctuation(SyntaxKind.SlashGreaterThanToken, "/>", Space, null)
+                );
+            }
+
+            return XmlElement(
+                XmlElementStartTag(
+                    LessThan,
+                    XmlName(null, XmlNameToken(name, null, attributes.Count > 0 ? Space : null)),
+                    attributes.ToList(),
+                    GreaterThan
+                ),
+                children.ToList(),
+                XmlElementEndTag(
+                    LessThanSlash,
+                    XmlName(null, XmlNameToken(name, null, null)),
+                    GreaterThan
+                )
+            );
+        }
+
+        private static void AddItems(IEnumerable content, ref SyntaxListBuilder<XmlAttributeSyntax> attributes, ref SyntaxListBuilder<XmlNodeSyntax> children)
+        {
+            foreach (var item in content)
+            {
+                if (item is null)
+                {
+                    continue;
+                }
+
+                if (item is XmlAttributeSyntax attribute)
+                {
+                    if (attributes.Count > 0)
+                    {
+                        attribute = attribute.WithLeadingTrivia(Space);
+                    }
+
+                    attributes.Add(attribute);
+                }
+                else if (item is XmlNodeSyntax node)
+                {
+                    children.Add(node);
+                }
+                else if (item is string text)
+                {
+                    children.Add(XmlText(List<SyntaxNode>(XmlTextLiteralToken(text, null, null))));
+                }
+                else if (item is IEnumerable enumerable)
+                {
+                    AddItems(enumerable, ref attributes, ref children);
+                }
+                else
+                {
+                    throw new NotSupportedException($"Unsupported item type: {item.GetType()}");
+                }
+            }
+        }
+
+        public static XmlAttributeSyntax XmlAttribute(string name, string value)
+        {
+            return XmlAttribute(
+                XmlName(null, XmlNameToken(name, null, null)),
+                Punctuation(SyntaxKind.EqualsToken, "=", null, null),
+                XmlString(
+                    Punctuation(SyntaxKind.DoubleQuoteToken, "\"", null, null),
+                    List(XmlTextLiteralToken(value, null, null)),
+                    Punctuation(SyntaxKind.DoubleQuoteToken, "\"", null, null)
+                )
+            );
+        }
+
         public static XmlPrefixSyntax XmlPrefix(XmlNameTokenSyntax localName, PunctuationSyntax colon)
         {
             return (XmlPrefixSyntax)new XmlPrefixSyntax.Green(localName?.GreenNode, colon?.GreenNode).CreateRed();
@@ -396,6 +480,11 @@ namespace Microsoft.Language.Xml
         }
 
         public static SyntaxList<TNode> List<TNode>(params TNode[] nodes) where TNode : SyntaxNode
+        {
+            return new SyntaxList<TNode>(nodes);
+        }
+
+        public static SyntaxList<TNode> List<TNode>(TNode nodes) where TNode : SyntaxNode
         {
             return new SyntaxList<TNode>(nodes);
         }

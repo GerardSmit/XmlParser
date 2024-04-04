@@ -289,6 +289,43 @@ namespace Microsoft.Language.Xml
             return (newRoot, index);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static TSelf NormalizeTrivia<TSelf>(this TSelf node, XmlElementBaseSyntax parent, int extra = 1)
+            where TSelf : XmlElementBaseSyntax
+        {
+            if (parent != null)
+            {
+                AddLeadingTrivia(parent, ref node, extra);
+            }
+
+            if (node is XmlElementSyntax element)
+            {
+                EnsureRootTrivia(ref element);
+                node = (TSelf)(object)element;
+            }
+
+            if (node is XmlElementSyntax { Content: { Count: > 0 } content })
+            {
+                var newContent = new SyntaxListBuilder<SyntaxNode>(content.Count);
+
+                foreach (SyntaxNode child in content)
+                {
+                    SyntaxNode newChild = child;
+
+                    if (newChild is XmlElementBaseSyntax childElement)
+                    {
+                        newChild = NormalizeTrivia(childElement, parent, extra + 1);
+                    }
+
+                    newContent.Add(newChild);
+                }
+
+                node = (TSelf)(object)node.WithContent(newContent.ToList());
+            }
+
+            return node;
+        }
+
         private static void EnsureRootTrivia(ref XmlElementSyntax newRoot)
         {
             if (!newRoot.EndTag.HasLeadingTrivia && newRoot.StartTag.HasLeadingTrivia)
@@ -297,24 +334,29 @@ namespace Microsoft.Language.Xml
             }
         }
 
-        private static void AddLeadingTrivia(XmlElementBaseSyntax root, ref XmlElementBaseSyntax result)
+        private static void AddLeadingTrivia<TSelf>(XmlElementBaseSyntax root, ref TSelf result, int extra = 1)
+            where TSelf : XmlElementBaseSyntax
         {
             if (root.HasLeadingTrivia)
             {
-                result = result.WithLeadingTrivia(CalculateNewTrivia(root, root.GetLeadingTrivia()));
+                result = result.WithLeadingTrivia(CalculateNewTrivia(root, root.GetLeadingTrivia(), extra));
             }
         }
 
-        internal static SyntaxTriviaList CalculateNewTrivia(XmlElementBaseSyntax root, SyntaxTriviaList trivia, int min = 0)
+        internal static SyntaxTriviaList CalculateNewTrivia(XmlElementBaseSyntax root, SyntaxTriviaList trivia, int extra = 1)
         {
-            var depth = GetDepth(root) + min;
+            var depth = GetDepth(root);
             var last = trivia.Last().Text;
 
             if (depth > 0)
             {
                 var additionalLength = last.Length / depth;
+                var substr = last.Substring(0, additionalLength);
 
-                last += last.Substring(0, additionalLength);
+                for (var i = 0; i < extra; i++)
+                {
+                    last += substr;
+                }
             }
             else
             {
