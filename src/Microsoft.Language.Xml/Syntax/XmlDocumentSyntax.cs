@@ -148,5 +148,15 @@ namespace Microsoft.Language.Xml
 
         public XmlElementBaseSyntax RootSyntax => Body as XmlElementBaseSyntax;
         public XmlElementBaseSyntax Root => RootSyntax.AsElement;
+
+        public XmlDocumentSyntax WithBody(XmlNodeSyntax newBody)
+        {
+            if (newBody == Body)
+            {
+                return this;
+            }
+
+            return SyntaxFactory.XmlDocument(Prologue, PrecedingMisc, newBody, FollowingMisc, SkippedTokens, Eof);
+        }
     }
 }

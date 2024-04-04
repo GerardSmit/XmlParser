@@ -171,5 +171,25 @@ namespace Microsoft.Language.Xml.Tests
                 </root>
                 """, root.ToFullString());
         }
+
+        [Fact]
+        public void ReplaceDocumentBody()
+        {
+            XmlDocumentSyntax root = Parser.ParseText(
+                """
+                <?xml version="1.0" encoding="utf-8"?>
+                <xml />
+                """);
+
+            root = root.ReplaceNode(
+                root.Root,
+                root.Root.SetAttribute("attr", "value")
+            );
+
+            Assert.Equal("""
+                         <?xml version="1.0" encoding="utf-8"?>
+                         <xml attr="value" />
+                         """, root.ToFullString());
+        }
     }
 }

@@ -73,19 +73,39 @@ namespace Microsoft.Language.Xml
             }
 
             // Fast path for XML nodes
-            if (root is XmlElementSyntax baseSyntax &&
-                oldNode is XmlElementBaseSyntax oldElement &&
+            if (oldNode is XmlElementBaseSyntax oldElement &&
                 newNode is XmlElementBaseSyntax newElement)
             {
-                return TryReplaceXmlNode(baseSyntax, oldElement, newElement, out XmlElementSyntax result)
-                    ? (TRoot)(object)result
-                    : root;
+                if (root is XmlElementSyntax baseSyntax)
+                {
+                    if (root == oldNode)
+                    {
+                        return (TRoot)(object)newElement;
+                    }
+
+                    return TryReplaceXmlNode(baseSyntax, oldElement, newElement, out XmlElementSyntax result)
+                        ? (TRoot)(object)result
+                        : root;
+                }
+
+                if (root is XmlDocumentSyntax document)
+                {
+                    if (document.Root == oldNode)
+                    {
+                        return (TRoot)(object)document.WithBody(newElement);
+                    }
+
+                    if (TryReplaceXmlNode(document.Root, oldElement, newElement, out XmlElementSyntax result))
+                    {
+                        return (TRoot)(object)document.WithBody(result);
+                    }
+                }
             }
 
             return (TRoot)root.ReplaceCore(nodes: new SyntaxList<SyntaxNode>(oldNode), computeReplacementNode: (o, r) => newNode);
         }
 
-        internal static bool TryReplaceXmlNode(this XmlElementSyntax baseSyntax, XmlElementBaseSyntax oldElement, XmlElementBaseSyntax newElement, out XmlElementSyntax result, List<int> path = null)
+        internal static bool TryReplaceXmlNode(this XmlElementBaseSyntax baseSyntax, XmlElementBaseSyntax oldElement, XmlElementBaseSyntax newElement, out XmlElementSyntax result, List<int> path = null)
         {
             using XmlElementEnumerator enumerator = baseSyntax.Elements.GetEnumerator();
 
@@ -113,7 +133,7 @@ namespace Microsoft.Language.Xml
                 }
             }
 
-            result = baseSyntax;
+            result = baseSyntax as XmlElementSyntax;
             return false;
         }
 
