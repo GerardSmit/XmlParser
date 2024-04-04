@@ -28,4 +28,10 @@
   <PropertyGroup Condition="Exists('$(XunitConsolePath)')">
     <XunitConsoleDirectory>$([System.IO.Path]::GetDirectoryName('$(XunitConsolePath)'))</XunitConsoleDirectory>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(XunitConsoleDirectory)\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Visible>False</Visible>
+    </None>
+  </ItemGroup>
 </Project>
