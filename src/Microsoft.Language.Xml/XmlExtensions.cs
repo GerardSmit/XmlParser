@@ -167,7 +167,9 @@ namespace Microsoft.Language.Xml
                 );
             }
 
-            var spaceBeginning = !element.NameNode.HasTrailingTrivia;
+            var spaceBeginning = element.AttributesNode.Count > 0
+                ? !element.AttributesNode.Last().HasTrailingTrivia
+                : !element.NameNode.HasTrailingTrivia;
 
             if (element is XmlEmptyElementSyntax { NameNode.HasTrailingTrivia: true })
             {

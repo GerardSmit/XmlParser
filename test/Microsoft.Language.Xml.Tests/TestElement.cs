@@ -25,6 +25,26 @@ namespace Microsoft.Language.Xml.Tests
         }
 
         [Fact]
+        public void SetAttributeExitingEmpty()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root foo=\"bar\" />").Root;
+
+            root = root.SetAttribute("attr", "value");
+
+            Assert.Equal("<root foo=\"bar\" attr=\"value\" />", root.ToFullString());
+        }
+
+        [Fact]
+        public void SetAttributeExitingContent()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root foo=\"bar\"></root>").Root;
+
+            root = root.SetAttribute("attr", "value");
+
+            Assert.Equal("<root foo=\"bar\" attr=\"value\"></root>", root.ToFullString());
+        }
+
+        [Fact]
         public void GetOrAddChildElement()
         {
             XmlElementBaseSyntax root = Parser.ParseText("<root></root>").Root;
