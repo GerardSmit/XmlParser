@@ -192,37 +192,58 @@ namespace Microsoft.Language.Xml
             if (name.Contains("/"))
             {
                 var parts = name.Split('/');
-                var i = 0;
-
-                var path = new List<int>();
-                XmlElementSyntax parent = root.GetOrAddElementCore(parts[i], out result, configure).Node;
-
-                while (++i < parts.Length)
-                {
-                    var (next, changed, index) = result.GetOrAddElementCore(parts[i], out XmlElementBaseSyntax nextResult, configure);
-
-                    if (changed)
-                    {
-                        path.Clear();
-
-                        if (!parent.TryReplaceXmlNode(result, next, out parent, path))
-                        {
-                            throw new InvalidOperationException();
-                        }
-
-                        path.Add(index);
-                        result = parent.GetElementByPath(path);
-                    }
-                    else
-                    {
-                        result = nextResult;
-                    }
-                }
-
-                return parent;
+                return GetOrAddByPath(parts, root, out result, configure);
             }
 
             return root.GetOrAddElementCore(name, out result, configure).Node;
+        }
+
+        public static XmlElementSyntax AddElement(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure = null)
+        {
+            if (name.Contains("/"))
+            {
+                var parts = name.Split('/');
+                var parentPath = new ArraySegment<string>(parts, 0, parts.Length - 1);
+                XmlElementSyntax newRoot = GetOrAddByPath(parentPath, root, out XmlElementBaseSyntax parent, configure);
+                XmlElementSyntax newParent = parent.AddElementCore(parts[parts.Length - 1], out result, configure).Node;
+
+                return newRoot.ReplaceNode(parent, newParent);
+            }
+
+            return root.AddElementCore(name, out result, configure).Node;
+        }
+
+        private static XmlElementSyntax GetOrAddByPath<T>(T parts, XmlElementBaseSyntax root, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
+            where T : IList<string>
+        {
+            var i = 0;
+
+            var path = new List<int>();
+            XmlElementSyntax parent = root.GetOrAddElementCore(parts[i], out result, configure).Node;
+
+            while (++i < parts.Count)
+            {
+                var (next, changed, index) = result.GetOrAddElementCore(parts[i], out XmlElementBaseSyntax nextResult, configure);
+
+                if (changed)
+                {
+                    path.Clear();
+
+                    if (!parent.TryReplaceXmlNode(result, next, out parent, path))
+                    {
+                        throw new InvalidOperationException();
+                    }
+
+                    path.Add(index);
+                    result = parent.GetElementByPath(path);
+                }
+                else
+                {
+                    result = nextResult;
+                }
+            }
+
+            return parent;
         }
 
         private static (XmlElementSyntax Node, bool Changed, int Index) GetOrAddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
@@ -241,6 +262,13 @@ namespace Microsoft.Language.Xml
                 }
             }
 
+            var (newRoot, index) = root.AddElementCore(name, out result, configure);
+
+            return (newRoot, true, index);
+        }
+
+        private static (XmlElementSyntax Node, int Index) AddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
+        {
             result = SyntaxFactory.XmlEmptyElement(
                 SyntaxFactory.LessThan,
                 SyntaxFactory.XmlName(null, SyntaxFactory.XmlNameToken(name, null, SyntaxFactory.Space)),
@@ -254,16 +282,19 @@ namespace Microsoft.Language.Xml
             }
 
             AddLeadingTrivia(root, ref result);
-
             XmlElementSyntax newRoot = root.AddChild(result, out var index);
+            EnsureRootTrivia(ref newRoot);
 
+            result = (XmlElementBaseSyntax) newRoot.Content[index];
+            return (newRoot, index);
+        }
+
+        private static void EnsureRootTrivia(ref XmlElementSyntax newRoot)
+        {
             if (!newRoot.EndTag.HasLeadingTrivia && newRoot.StartTag.HasLeadingTrivia)
             {
                 newRoot = newRoot.WithEndTag(newRoot.EndTag.WithLeadingTrivia(newRoot.StartTag.GetLeadingTrivia()));
             }
-
-            result = (XmlElementBaseSyntax) newRoot.Content[index];
-            return (newRoot, true, index);
         }
 
         private static void AddLeadingTrivia(XmlElementBaseSyntax root, ref XmlElementBaseSyntax result)

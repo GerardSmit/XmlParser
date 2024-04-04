@@ -160,16 +160,16 @@ namespace Microsoft.Language.Xml.Tests
             root = root.GetOrAddElement("a/b/c/d", out XmlElementBaseSyntax d);
 
             Assert.Equal("""
-                <root>
-                    <a>
-                        <b>
-                            <c>
-                                <d />
-                            </c>
-                        </b>
-                    </a>
-                </root>
-                """, root.ToFullString());
+                         <root>
+                             <a>
+                                 <b>
+                                     <c>
+                                         <d />
+                                     </c>
+                                 </b>
+                             </a>
+                         </root>
+                         """, root.ToFullString());
         }
 
         [Fact]
@@ -190,6 +190,39 @@ namespace Microsoft.Language.Xml.Tests
                          <?xml version="1.0" encoding="utf-8"?>
                          <xml attr="value" />
                          """, root.ToFullString());
+        }
+
+        [Fact]
+        public void AddChildElementExistingWhitespace4()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText(
+                """
+                <root>
+                    <a>
+                        <b>
+                            <c>
+                                <d />
+                            </c>
+                        </b>
+                    </a>
+                </root>
+                """).Root;
+
+            root = root.AddElement("a/b/c/d", out XmlElementBaseSyntax d);
+
+            Assert.Equal(
+                """
+                <root>
+                    <a>
+                        <b>
+                            <c>
+                                <d />
+                                <d />
+                            </c>
+                        </b>
+                    </a>
+                </root>
+                """, root.ToFullString());
         }
     }
 }
