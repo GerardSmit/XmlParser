@@ -1,5 +1,33 @@
 # XmlParser
 
+> [!NOTE]  
+> This is a fork of the 'GuiLabs.Language.Xml' project. See [KirillOsenkov/XmlParser](https://github.com/KirillOsenkov/XmlParser) for the original project. This project is not affiliated with the original project (the namespace and the project name for drop-in replacement).
+
+## Changes
+In comparison to the original project, this fork has the following changes:
+
+- Removed the interfaces `IXmlElement` and `IXmlElementSyntax`.  
+  **Reason:** this made editing the syntax tree more difficult, as the interfaces had to be cast to the SyntaxNode constantly. As replacement a new class called `XmlElementBaseSyntax` was introduced.
+
+- Added various enumerators for nodes, XML attributes and XML elements.  
+  **Reason:** before the iterator methods were used, which generated a state machine and allocates memory. The enumerators are more efficient and don't allocate memory.
+
+- Improved `ReplaceNode` for XML elements.  
+  **Reason:** Before a visitor was used to replace nodes, which allocated more memory and was less efficient.
+
+- Added the following utility methods:
+  - `GetOrAddElement` - gets or adds an element to the XML tree, with support for paths. For example:
+    ```cs
+    root = root.GetOrAddElement('Project/PropertyGroup', out var propertyGroup)
+    ```
+  - `SetAttribute` - sets an attribute of an element. If the attribute does not exist, it is added.
+    ```cs
+    propertyGroup = propertyGroup.SetAttribute("TargetFramework", "net9.0");
+    ```
+
+**Original README:**
+---
+
 ![logo image](http://neteril.org/~jeremie/language_xml_logo.png)
 
 [![Build status](https://ci.appveyor.com/api/projects/status/5ur9sv9bp4nr7a3n?svg=true)](https://ci.appveyor.com/project/KirillOsenkov/xmlparser)

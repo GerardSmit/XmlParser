@@ -16,7 +16,7 @@ namespace Microsoft.Language.Xml
         public abstract SyntaxList<SyntaxNode> Content { get; }
         public XmlElementBaseSyntax AsElement => this;
 
-        public new XmlElementBaseSyntax Parent => (XmlElementBaseSyntax)base.Parent;
+        public new XmlElementBaseSyntax Parent => base.Parent as XmlElementBaseSyntax;
 
         public abstract XmlElementEnumerator Elements { get; }
 

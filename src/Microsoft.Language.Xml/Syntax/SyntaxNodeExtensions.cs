@@ -101,7 +101,7 @@ namespace Microsoft.Language.Xml
                     return true;
                 }
 
-                if (TryReplaceXmlNode(enumerator.Current as XmlElementSyntax, oldElement, newElement, out var newChild, path))
+                if (TryReplaceXmlNode(enumerator.Current as XmlElementSyntax, oldElement, newElement, out XmlElementSyntax newChild, path))
                 {
                     result = baseSyntax.WithContent(
                         baseSyntax.Content.Replace(enumerator.CurrentIndex, newChild)

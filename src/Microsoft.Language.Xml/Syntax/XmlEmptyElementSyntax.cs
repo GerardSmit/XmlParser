@@ -176,6 +176,7 @@ namespace Microsoft.Language.Xml
             var annotations = this.GetAnnotations();
             if (annotations != null && annotations.Length > 0)
                 return newNode.WithAnnotations(annotations);
+
             return newNode;
         }
 

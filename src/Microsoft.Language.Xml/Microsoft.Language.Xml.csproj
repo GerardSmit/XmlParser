@@ -34,14 +34,13 @@
   </ItemGroup>
   <PropertyGroup>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageId>GuiLabs.Language.Xml</PackageId>
-    <Authors>Microsoft</Authors>
-    <Company>Microsoft</Company>
+    <PackageId>GerardSmit.Language.Xml</PackageId>
+    <Authors>GerardSmit, Microsoft</Authors>
     <Summary>A full-fidelity XML parser</Summary>
-    <Description>A full-fidelity XML parser. Produces a syntax tree from XML text, preserves all whitespace and provides low-level API to examine the exact structure of the source text.</Description>
+    <Description>Fork of GuiLabs.Language.Xml, a full-fidelity XML parser. Produces a syntax tree from XML text, preserves all whitespace and provides low-level API to examine the exact structure of the source text.</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/KirillOsenkov/XmlParser</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/KirillOsenkov/XmlParser</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/GerardSmit/XmlParser</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/GerardSmit/XmlParser</RepositoryUrl>
     <PackageIcon>language_xml_logo.png</PackageIcon>
     <PackageTags>Xml Parser</PackageTags>
     <IncludeSymbols>true</IncludeSymbols>

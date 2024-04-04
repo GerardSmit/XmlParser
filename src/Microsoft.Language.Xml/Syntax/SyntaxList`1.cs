@@ -249,6 +249,18 @@ namespace Microsoft.Language.Xml
             }
         }
 
+        public List<TNode> ToList()
+        {
+            var list = new List<TNode>(Count);
+
+            foreach (TNode node in this)
+            {
+                list.Add(node);
+            }
+
+            return list;
+        }
+
         public SyntaxList<TNode> Replace(int index, TNode node)
         {
             if (index < 0 || index >= this.Count)

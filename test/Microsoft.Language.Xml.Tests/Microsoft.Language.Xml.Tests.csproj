@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>Microsoft.Language.Xml.Tests</AssemblyName>
-    <TargetFramework>net472</TargetFramework>
-    <IsWindows>$([MSBuild]::IsOSPlatform('Windows'))</IsWindows>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>True</SignAssembly>
@@ -12,7 +11,7 @@
   <ItemGroup>
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1" />
-    <PackageReference Include="xunit.runner.console" Version="2.4.1" Condition="!$(IsWindows)" />
+    <PackageReference Include="xunit.runner.console" Version="2.4.1" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -29,10 +28,4 @@
   <PropertyGroup Condition="Exists('$(XunitConsolePath)')">
     <XunitConsoleDirectory>$([System.IO.Path]::GetDirectoryName('$(XunitConsolePath)'))</XunitConsoleDirectory>
   </PropertyGroup>
-  <ItemGroup Condition="!$(IsWindows)">
-    <None Include="$(XunitConsoleDirectory)\*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <Visible>False</Visible>
-    </None>
-  </ItemGroup>
 </Project>

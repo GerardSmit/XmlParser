@@ -185,7 +185,7 @@ namespace Microsoft.Language.Xml
             return newRule;
         }
 
-        public static XmlElementSyntax GetOrAddElement(this XmlElementBaseSyntax root, string name, out XmlElementSyntax result)
+        public static XmlElementSyntax GetOrAddElement(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure = null)
         {
             if (name.Contains("/"))
             {
@@ -193,11 +193,11 @@ namespace Microsoft.Language.Xml
                 var i = 0;
 
                 var path = new List<int>();
-                XmlElementSyntax parent = root.GetOrAddElementCore(parts[i], out result).Node;
+                XmlElementSyntax parent = root.GetOrAddElementCore(parts[i], out result, configure).Node;
 
                 while (++i < parts.Length)
                 {
-                    var (next, changed, index) = result.GetOrAddElementCore(parts[i], out XmlElementSyntax nextResult);
+                    var (next, changed, index) = result.GetOrAddElementCore(parts[i], out XmlElementBaseSyntax nextResult, configure);
 
                     if (changed)
                     {
@@ -209,7 +209,7 @@ namespace Microsoft.Language.Xml
                         }
 
                         path.Add(index);
-                        result = ((XmlElementSyntax) parent.GetElementByPath(path));
+                        result = parent.GetElementByPath(path);
                     }
                     else
                     {
@@ -220,10 +220,10 @@ namespace Microsoft.Language.Xml
                 return parent;
             }
 
-            return root.GetOrAddElementCore(name, out result).Node;
+            return root.GetOrAddElementCore(name, out result, configure).Node;
         }
 
-        private static (XmlElementSyntax Node, bool Changed, int Index) GetOrAddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementSyntax result)
+        private static (XmlElementSyntax Node, bool Changed, int Index) GetOrAddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
         {
             using (XmlElementEnumerator enumerator = root.Elements.GetEnumerator())
             {
@@ -234,29 +234,76 @@ namespace Microsoft.Language.Xml
                     if (name.Equals(child.Name, StringComparison.Ordinal))
                     {
                         result = (XmlElementSyntax) child;
-                        return (result, false, enumerator.CurrentIndex);
+                        return ((XmlElementSyntax)root, false, enumerator.CurrentIndex);
                     }
                 }
             }
 
-            result = SyntaxFactory.XmlElement(
-                SyntaxFactory.XmlElementStartTag(
-                    SyntaxFactory.LessThan,
-                    SyntaxFactory.XmlName(null, SyntaxFactory.XmlNameToken(name, null, null)),
-                    default(XmlNameSyntax),
-                    SyntaxFactory.GreaterThan
-                ),
-                null,
-                SyntaxFactory.XmlElementEndTag(
-                    SyntaxFactory.LessThanSlash,
-                    SyntaxFactory.XmlName(null, SyntaxFactory.XmlNameToken(name, null, null)),
-                    SyntaxFactory.GreaterThan
-                )
+            result = SyntaxFactory.XmlEmptyElement(
+                SyntaxFactory.LessThan,
+                SyntaxFactory.XmlName(null, SyntaxFactory.XmlNameToken(name, null, SyntaxFactory.Space)),
+                default(SyntaxNode),
+                SyntaxFactory.SlashGreaterThan
             );
 
+            if (configure is not null)
+            {
+                result = configure(result);
+            }
+
+            AddLeadingTrivia(root, ref result);
+
             XmlElementSyntax newRoot = root.AddChild(result, out var index);
-            result = (XmlElementSyntax) newRoot.Content[index];
+
+            if (!newRoot.EndTag.HasLeadingTrivia && newRoot.StartTag.HasLeadingTrivia)
+            {
+                newRoot = newRoot.WithEndTag(newRoot.EndTag.WithLeadingTrivia(newRoot.StartTag.GetLeadingTrivia()));
+            }
+
+            result = (XmlElementBaseSyntax) newRoot.Content[index];
             return (newRoot, true, index);
+        }
+
+        private static void AddLeadingTrivia(XmlElementBaseSyntax root, ref XmlElementBaseSyntax result)
+        {
+            if (root.HasLeadingTrivia)
+            {
+                result = result.WithLeadingTrivia(CalculateNewTrivia(root, root.GetLeadingTrivia()));
+            }
+        }
+
+        internal static SyntaxTriviaList CalculateNewTrivia(XmlElementBaseSyntax root, SyntaxTriviaList trivia, int min = 0)
+        {
+            var depth = GetDepth(root) + min;
+            var last = trivia.Last().Text;
+
+            if (depth > 0)
+            {
+                var additionalLength = last.Length / depth;
+
+                last += last.Substring(0, additionalLength);
+            }
+            else
+            {
+                last += last;
+            }
+
+            trivia = trivia.Replace(trivia.Last(), SyntaxFactory.WhitespaceTrivia(last));
+            return trivia;
+        }
+
+        private static int GetDepth(XmlElementBaseSyntax root)
+        {
+            var depth = 0;
+            XmlElementBaseSyntax current = root;
+
+            while (current.ParentElement is { } parent)
+            {
+                current = parent;
+                depth++;
+            }
+
+            return depth;
         }
     }
 }
