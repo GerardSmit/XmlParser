@@ -337,6 +337,15 @@ namespace Microsoft.Language.Xml
 
         public static XmlAttributeSyntax XmlAttribute(string name, string value)
         {
+            if (value is null)
+            {
+                return XmlAttribute(
+                    XmlName(null, XmlNameToken(name, null, null)),
+                    null,
+                    null
+                );
+            }
+
             return XmlAttribute(
                 XmlName(null, XmlNameToken(name, null, null)),
                 Punctuation(SyntaxKind.EqualsToken, "=", null, null),

@@ -1,5 +1,6 @@
 using Xunit;
 using static Microsoft.Language.Xml.SyntaxFactory;
+using XmlAttribute = System.Xml.XmlAttribute;
 
 namespace Microsoft.Language.Xml.Tests
 {
@@ -232,6 +233,9 @@ namespace Microsoft.Language.Xml.Tests
             XmlElementBaseSyntax root = Parser.ParseText(
                 """
                 <configuration>
+                <system.web>
+                     <test />
+                 </system.web>
                     <system.webServer>
                         <rewrite>
                             <rules>
@@ -252,8 +256,10 @@ namespace Microsoft.Language.Xml.Tests
                     XmlAttribute("enabled", "true"),
                     XmlElement("match",
                         XmlAttribute("url", "pattern"),
-                        XmlAttribute("negate", "false")
+                        XmlAttribute("negate", "false"),
+                        XmlAttribute("test", null)
                     ),
+                    null,
                     XmlElement("action",
                         XmlAttribute("type", "Rewrite"),
                         XmlAttribute("url", "http://example.com")
@@ -264,11 +270,14 @@ namespace Microsoft.Language.Xml.Tests
             Assert.Equal(
                 """
                 <configuration>
+                <system.web>
+                     <test />
+                 </system.web>
                     <system.webServer>
                         <rewrite>
                             <rules>
                                 <rule name="rule1" enabled="true">
-                                    <match url="pattern" negate="false" />
+                                    <match url="pattern" negate="false" test />
                                     <action type="Rewrite" url="http://example.com" />
                                 </rule>
                             </rules>

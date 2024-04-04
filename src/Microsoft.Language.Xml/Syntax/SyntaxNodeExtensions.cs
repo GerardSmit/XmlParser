@@ -107,6 +107,12 @@ namespace Microsoft.Language.Xml
 
         internal static bool TryReplaceXmlNode(this XmlElementBaseSyntax baseSyntax, XmlElementBaseSyntax oldElement, XmlElementBaseSyntax newElement, out XmlElementSyntax result, List<int> path = null)
         {
+            if (baseSyntax is null)
+            {
+                result = null;
+                return false;
+            }
+
             using XmlElementEnumerator enumerator = baseSyntax.Elements.GetEnumerator();
 
             while (enumerator.MoveNext())
