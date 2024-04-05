@@ -113,7 +113,7 @@ namespace Microsoft.Language.Xml
                 return false;
             }
 
-            using XmlElementEnumerator enumerator = baseSyntax.Elements.GetEnumerator();
+            var enumerator = baseSyntax.Content.GetEnumerator();
 
             while (enumerator.MoveNext())
             {
@@ -133,7 +133,7 @@ namespace Microsoft.Language.Xml
                         baseSyntax.Content.Replace(enumerator.CurrentIndex, newChild)
                     );
 
-                    path?.Add(enumerator.CurrentIndex);
+                    path?.Insert(0, enumerator.CurrentIndex);
 
                     return true;
                 }

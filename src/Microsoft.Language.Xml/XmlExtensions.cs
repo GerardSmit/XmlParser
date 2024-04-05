@@ -248,17 +248,19 @@ namespace Microsoft.Language.Xml
 
         private static (XmlElementSyntax Node, bool Changed, int Index) GetOrAddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
         {
-            using (XmlElementEnumerator enumerator = root.Elements.GetEnumerator())
-            {
-                while (enumerator.MoveNext())
-                {
-                    XmlElementBaseSyntax child = enumerator.Current!;
+            SyntaxList<SyntaxNode>.Enumerator enumerator = root.Content.GetEnumerator();
 
-                    if (name.Equals(child.Name, StringComparison.Ordinal))
-                    {
-                        result = (XmlElementSyntax) child;
-                        return ((XmlElementSyntax)root, false, enumerator.CurrentIndex);
-                    }
+            while (enumerator.MoveNext())
+            {
+                if (enumerator.Current is not XmlElementBaseSyntax child)
+                {
+                    continue;
+                }
+
+                if (name.Equals(child.Name, StringComparison.Ordinal))
+                {
+                    result = (XmlElementSyntax) child;
+                    return ((XmlElementSyntax)root, false, enumerator.CurrentIndex);
                 }
             }
 

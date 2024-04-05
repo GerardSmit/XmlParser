@@ -110,6 +110,26 @@ namespace Microsoft.Language.Xml.Tests
         }
 
         [Fact]
+        public void GetOrAddChildElement4Text()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root><a>Test</a></root>").Root;
+
+            root = root.GetOrAddElement("a/b/c/d", out XmlElementBaseSyntax d);
+
+            Assert.Equal("<root><a>Test<b><c><d /></c></b></a></root>", root.ToFullString());
+        }
+
+        [Fact]
+        public void GetOrAddChildElement4Multiple()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root><foo /><a><foo /></a></root>").Root;
+
+            root = root.GetOrAddElement("a/b/c/d", out XmlElementBaseSyntax d);
+
+            Assert.Equal("<root><foo /><a><foo /><b><c><d /></c></b></a></root>", root.ToFullString());
+        }
+
+        [Fact]
         public void GetOrAddChildElementExisting4()
         {
             XmlElementBaseSyntax root = Parser.ParseText("<root><a><b><c></c></b></a></root>").Root;

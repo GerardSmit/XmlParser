@@ -585,6 +585,8 @@ namespace Microsoft.Language.Xml
             private readonly SyntaxList<TNode> _list;
             private int _index;
 
+            public int CurrentIndex => _index;
+
             internal Enumerator(in SyntaxList<TNode> list)
             {
                 _list = list;
