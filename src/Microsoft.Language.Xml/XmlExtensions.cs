@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.Language.Xml.Collections;
 
@@ -187,7 +188,7 @@ namespace Microsoft.Language.Xml
             return newRule;
         }
 
-        public static XmlElementSyntax GetOrAddElement(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure = null)
+        public static XmlElementSyntax GetOrAddElement(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax> configure = null)
         {
             if (name.Contains("/"))
             {
@@ -198,7 +199,7 @@ namespace Microsoft.Language.Xml
             return root.GetOrAddElementCore(name, out result, configure).Node;
         }
 
-        public static XmlElementSyntax AddElement(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure = null)
+        public static XmlElementSyntax AddElement(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax> configure = null)
         {
             if (name.Contains("/"))
             {
@@ -213,7 +214,7 @@ namespace Microsoft.Language.Xml
             return root.AddElementCore(name, out result, configure).Node;
         }
 
-        private static XmlElementSyntax GetOrAddByPath<T>(T parts, XmlElementBaseSyntax root, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
+        private static XmlElementSyntax GetOrAddByPath<T>(T parts, XmlElementBaseSyntax root, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
             where T : IList<string>
         {
             var i = 0;
@@ -246,7 +247,7 @@ namespace Microsoft.Language.Xml
             return parent;
         }
 
-        private static (XmlElementSyntax Node, bool Changed, int Index) GetOrAddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
+        private static (XmlElementSyntax Node, bool Changed, int Index) GetOrAddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
         {
             SyntaxList<SyntaxNode>.Enumerator enumerator = root.Content.GetEnumerator();
 
@@ -269,7 +270,7 @@ namespace Microsoft.Language.Xml
             return (newRoot, true, index);
         }
 
-        private static (XmlElementSyntax Node, int Index) AddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
+        private static (XmlElementSyntax Node, int Index) AddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
         {
             result = SyntaxFactory.XmlEmptyElement(
                 SyntaxFactory.LessThan,
@@ -280,12 +281,16 @@ namespace Microsoft.Language.Xml
 
             if (configure is not null)
             {
-                result = configure(result);
+                result = configure(root, result);
             }
 
             AddLeadingTrivia(root, ref result);
             XmlElementSyntax newRoot = root.AddChild(result, out var index);
-            EnsureRootTrivia(ref newRoot);
+
+            if (result.HasLeadingTrivia)
+            {
+                EnsureRootTrivia(ref newRoot);
+            }
 
             result = (XmlElementBaseSyntax) newRoot.Content[index];
             return (newRoot, index);
@@ -330,9 +335,16 @@ namespace Microsoft.Language.Xml
 
         private static void EnsureRootTrivia(ref XmlElementSyntax newRoot)
         {
-            if (!newRoot.EndTag.HasLeadingTrivia && newRoot.StartTag.HasLeadingTrivia)
+            if (!newRoot.EndTag.HasLeadingTrivia)
             {
-                newRoot = newRoot.WithEndTag(newRoot.EndTag.WithLeadingTrivia(newRoot.StartTag.GetLeadingTrivia()));
+                if (newRoot.StartTag.HasLeadingTrivia)
+                {
+                    newRoot = newRoot.WithEndTag(newRoot.EndTag.WithLeadingTrivia(newRoot.StartTag.GetLeadingTrivia()));
+                }
+                else
+                {
+                    newRoot = newRoot.WithEndTag(newRoot.EndTag.WithLeadingTrivia(SyntaxFactory.CarriageReturnLineFeed));
+                }
             }
         }
 
@@ -342,6 +354,19 @@ namespace Microsoft.Language.Xml
             if (root.HasLeadingTrivia)
             {
                 result = result.WithLeadingTrivia(CalculateNewTrivia(root, root.GetLeadingTrivia(), extra));
+            }
+            else
+            {
+                XmlElementBaseSyntax element = root.Elements.FirstOrDefault();
+
+                if (element is not null && element.HasLeadingTrivia)
+                {
+                    result = result.WithLeadingTrivia(element.GetLeadingTrivia());
+                }
+                else if (root.Parent is null)
+                {
+                    result = result.WithLeadingTrivia(SyntaxFactory.CarriageReturnLineFeed, SyntaxFactory.DoubleSpace);
+                }
             }
         }
 

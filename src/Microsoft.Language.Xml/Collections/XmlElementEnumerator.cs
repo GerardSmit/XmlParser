@@ -10,7 +10,7 @@ namespace Microsoft.Language.Xml.Collections
     {
         private int _current;
 
-        public int CurrentIndex => _current - 1;
+        public int CurrentIndexInContent => _current - 1;
 
         public XmlElementEnumerator GetEnumerator()
         {

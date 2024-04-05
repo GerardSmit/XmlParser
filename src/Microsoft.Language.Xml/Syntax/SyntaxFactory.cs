@@ -11,6 +11,7 @@ namespace Microsoft.Language.Xml
         public static readonly SyntaxToken EofToken = Token(null, SyntaxKind.EndOfFileToken, null, "");
         public static readonly SyntaxTrivia CarriageReturnLineFeed = EndOfLineTrivia("\r\n");
         public static readonly SyntaxTrivia Space = WhitespaceTrivia(" ");
+        public static readonly SyntaxTrivia DoubleSpace = WhitespaceTrivia("  ");
         public static readonly SyntaxTrivia Tab = WhitespaceTrivia("\t");
         public static readonly PunctuationSyntax Equals = Punctuation(SyntaxKind.EqualsToken, "=", null, null);
         public static readonly PunctuationSyntax DoubleQuote = Punctuation(SyntaxKind.DoubleQuoteToken, "\"", null, null);

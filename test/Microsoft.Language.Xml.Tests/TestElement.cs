@@ -53,7 +53,7 @@ namespace Microsoft.Language.Xml.Tests
 
             root = root.GetOrAddElement("a", out XmlElementBaseSyntax a);
 
-            Assert.Equal("<root><a /></root>", root.ToFullString());
+            Assert.Equal("<root>\r\n  <a />\r\n</root>", root.ToFullString());
         }
 
         [Fact]
@@ -63,7 +63,7 @@ namespace Microsoft.Language.Xml.Tests
 
             root = root.GetOrAddElement("a", out XmlElementBaseSyntax a);
 
-            Assert.Equal("<root><a /></root>", root.ToFullString());
+            Assert.Equal("<root>\r\n  <a />\r\n</root>", root.ToFullString());
         }
 
         [Fact]
@@ -76,7 +76,7 @@ namespace Microsoft.Language.Xml.Tests
             XmlElementSyntax newA = a.GetOrAddElement("b", out XmlElementBaseSyntax b);
             root = root.ReplaceNode(a, newA);
 
-            Assert.Equal("<root><a><b /></a></root>", root.ToFullString());
+            Assert.Equal("<root>\r\n  <a>\r\n    <b />\r\n  </a>\r\n</root>", root.ToFullString());
         }
 
         [Fact]
@@ -86,7 +86,7 @@ namespace Microsoft.Language.Xml.Tests
 
             root = root.GetOrAddElement("a/b", out XmlElementBaseSyntax a);
 
-            Assert.Equal("<root><a><b /></a></root>", root.ToFullString());
+            Assert.Equal("<root>\r\n  <a>\r\n    <b />\r\n  </a>\r\n</root>", root.ToFullString());
         }
 
         [Fact]
@@ -96,7 +96,7 @@ namespace Microsoft.Language.Xml.Tests
 
             root = root.GetOrAddElement("a/b/c", out XmlElementBaseSyntax c);
 
-            Assert.Equal("<root><a><b><c /></b></a></root>", root.ToFullString());
+            Assert.Equal("<root>\r\n  <a>\r\n    <b>\r\n      <c />\r\n    </b>\r\n  </a>\r\n</root>", root.ToFullString());
         }
 
         [Fact]
@@ -106,7 +106,7 @@ namespace Microsoft.Language.Xml.Tests
 
             root = root.GetOrAddElement("a/b/c/d", out XmlElementBaseSyntax d);
 
-            Assert.Equal("<root><a><b><c><d /></c></b></a></root>", root.ToFullString());
+            Assert.Equal("<root>\r\n  <a>\r\n    <b>\r\n      <c>\r\n        <d />\r\n      </c>\r\n    </b>\r\n  </a>\r\n</root>", root.ToFullString());
         }
 
         [Fact]
