@@ -27,7 +27,7 @@ namespace Microsoft.Language.Xml.Tests
         }
 
         [Fact]
-        public void SetAttributeExitingEmpty()
+        public void SetAttributeExistingEmpty()
         {
             XmlElementBaseSyntax root = Parser.ParseText("<root foo=\"bar\" />").Root;
 
@@ -37,13 +37,23 @@ namespace Microsoft.Language.Xml.Tests
         }
 
         [Fact]
-        public void SetAttributeExitingContent()
+        public void SetAttributeExistingContent()
         {
             XmlElementBaseSyntax root = Parser.ParseText("<root foo=\"bar\"></root>").Root;
 
             root = root.SetAttribute("attr", "value");
 
             Assert.Equal("<root foo=\"bar\" attr=\"value\"></root>", root.ToFullString());
+        }
+
+        [Fact]
+        public void SetAttributeExistingContentTrivia()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root attr=\"old\" foo=\"bar\"></root>").Root;
+
+            root = root.SetAttribute("attr", "value");
+
+            Assert.Equal("<root attr=\"value\" foo=\"bar\"></root>", root.ToFullString());
         }
 
         [Fact]

@@ -162,6 +162,16 @@ namespace Microsoft.Language.Xml
 
             if (attribute is not null)
             {
+                if (attribute.HasLeadingTrivia)
+                {
+                    newValue = newValue.WithLeadingTrivia(attribute.GetLeadingTrivia());
+                }
+
+                if (attribute.HasTrailingTrivia)
+                {
+                    newValue = newValue.WithTrailingTrivia(attribute.GetTrailingTrivia());
+                }
+
                 return element.ReplaceNode(
                     attribute,
                     attribute.WithValue(newValue)
