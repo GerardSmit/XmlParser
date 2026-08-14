@@ -30,6 +30,27 @@ namespace Microsoft.Language.Xml
 
         protected internal abstract XmlElementBaseSyntax WithName(XmlNameSyntax newName);
 
+        /// <summary>
+        /// The first child element with the given name, or <c>null</c> when there is none.
+        /// </summary>
+        public XmlElementBaseSyntax? GetElement(string localName, string? prefix = null)
+        {
+            foreach (XmlElementBaseSyntax element in GetElements(localName, prefix))
+            {
+                return element;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// The child elements with the given name, in document order.
+        /// </summary>
+        public XmlNamedElementEnumerator GetElements(string localName, string? prefix = null)
+        {
+            return new XmlNamedElementEnumerator(Content, localName, prefix);
+        }
+
         public XmlAttributeSyntax? GetAttribute(string localName, string? prefix = null)
         {
             foreach (XmlAttributeSyntax attr in AttributesNode)

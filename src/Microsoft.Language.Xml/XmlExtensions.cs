@@ -276,7 +276,9 @@ namespace Microsoft.Language.Xml
 
                 if (name.Equals(child.Name, StringComparison.Ordinal))
                 {
-                    result = (XmlElementSyntax) child;
+                    // The match may be self-closing, so it is not necessarily an XmlElementSyntax.
+                    // The root is, though: finding a child at all means it has content.
+                    result = child;
                     return ((XmlElementSyntax)root, false, enumerator.CurrentIndex);
                 }
             }
@@ -337,6 +339,10 @@ namespace Microsoft.Language.Xml
 
                     if (newChild is XmlElementBaseSyntax childElement)
                     {
+                        // The insertion parent is deliberately passed down unchanged, and only the
+                        // level count grows. It is the only node here whose position in the document
+                        // is known: everything below is new, carries no indentation of its own to
+                        // scale from, and is not attached yet, so GetDepth would under-count it.
                         newChild = NormalizeTrivia(childElement, parent, extra + 1);
                     }
 
@@ -411,24 +417,102 @@ namespace Microsoft.Language.Xml
         }
 
         /// <summary>
-        /// Derives one indent unit from the root element's existing children and repeats it
-        /// <paramref name="levels"/> times. Falls back to four spaces when the document has nothing
-        /// to learn from.
+        /// Every element reachable from <paramref name="node"/> by the given slash-separated path,
+        /// in document order. Child axis only - no predicates, attributes or <c>//</c>.
+        /// </summary>
+        /// <remarks>
+        /// Every segment is expanded, not just the last: a path through two <c>&lt;location&gt;</c>
+        /// elements yields matches under both.
+        /// </remarks>
+        public static IEnumerable<XmlElementBaseSyntax> GetElementsByPath(this XmlElementBaseSyntax node, string path)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                throw new ArgumentException("Path must not be empty.", nameof(path));
+            }
+
+            IEnumerable<XmlElementBaseSyntax> current = new[] { node };
+
+            foreach (var segment in path.Split('/'))
+            {
+                if (segment.Length == 0)
+                {
+                    throw new ArgumentException($"Path '{path}' contains an empty segment.", nameof(path));
+                }
+
+                var colon = segment.IndexOf(':');
+                var prefix = colon < 0 ? null : segment.Substring(0, colon);
+                var localName = colon < 0 ? segment : segment.Substring(colon + 1);
+
+                current = current.SelectMany(x => x.GetElements(localName, prefix));
+            }
+
+            return current;
+        }
+
+        /// <summary>
+        /// The whitespace one nesting level adds in this document, inferred from what the document
+        /// root already contains. Falls back to four spaces when there is nothing to infer from.
+        /// </summary>
+        /// <param name="documentRoot">
+        /// The document's root element. Its children sit exactly one level in, which is what makes
+        /// their indentation a unit; passing a deeper element yields that element's total indent.
+        /// </param>
+        public static string GetIndentUnit(this XmlElementBaseSyntax documentRoot)
+        {
+            var unit = documentRoot.Elements.FirstOrDefault()?.GetIndent();
+
+            return string.IsNullOrEmpty(unit) ? "    " : unit!;
+        }
+
+        /// <summary>
+        /// The whitespace this element sits behind, or an empty string when it starts a line or is
+        /// the document root.
+        /// </summary>
+        public static string GetIndent(this XmlElementBaseSyntax element)
+        {
+            return element.GetLeadingTrivia()
+                .LastOrDefault(x => x.Kind == SyntaxKind.WhitespaceTrivia)?
+                .Text ?? string.Empty;
+        }
+
+        /// <summary>
+        /// The line ending this document uses, taken from the first one the parser produced.
+        /// Falls back to <c>\r\n</c> for a document that contains no line break at all.
+        /// </summary>
+        public static string GetNewLine(this XmlElementBaseSyntax documentRoot)
+        {
+            var newLine = FindNewLine(documentRoot.GetLeadingTrivia());
+
+            if (newLine is not null)
+            {
+                return newLine;
+            }
+
+            foreach (XmlElementBaseSyntax descendant in documentRoot.Descendants())
+            {
+                newLine = FindNewLine(descendant.GetLeadingTrivia());
+
+                if (newLine is not null)
+                {
+                    return newLine;
+                }
+            }
+
+            return SyntaxFactory.CarriageReturnLineFeed.Text;
+        }
+
+        private static string? FindNewLine(SyntaxTriviaList trivia)
+        {
+            return trivia.FirstOrDefault(x => x.Kind == SyntaxKind.EndOfLineTrivia)?.Text;
+        }
+
+        /// <summary>
+        /// One indent unit for <paramref name="root"/>'s document, repeated once per level.
         /// </summary>
         private static string GetRootIndent(XmlElementBaseSyntax root, int levels)
         {
-            var unit = root.Elements
-                .FirstOrDefault()?
-                .GetLeadingTrivia()
-                .LastOrDefault(x => x.Kind == SyntaxKind.WhitespaceTrivia)?
-                .Text;
-
-            if (string.IsNullOrEmpty(unit))
-            {
-                unit = "    ";
-            }
-
-            return string.Concat(Enumerable.Repeat(unit, Math.Max(levels, 1)));
+            return string.Concat(Enumerable.Repeat(root.GetIndentUnit(), Math.Max(levels, 1)));
         }
 
         private static int GetDepth(XmlElementBaseSyntax root)

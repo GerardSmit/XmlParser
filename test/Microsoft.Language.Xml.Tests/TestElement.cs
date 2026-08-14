@@ -77,6 +77,28 @@ namespace Microsoft.Language.Xml.Tests
         }
 
         [Fact]
+        public void GetOrAddChildExistingSelfClosing()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root><a /></root>").Root;
+
+            root = root.GetOrAddElement("a", out XmlElementBaseSyntax a);
+
+            Assert.Equal("<root><a /></root>", root.ToFullString());
+            Assert.Equal("a", a.Name);
+        }
+
+        [Fact]
+        public void GetOrAddChildPathThroughSelfClosing()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root><a /></root>").Root;
+
+            root = root.GetOrAddElement("a/b", out XmlElementBaseSyntax b);
+
+            Assert.Equal("b", b.Name);
+            Assert.Equal("<root><a><b /></a></root>", root.ToFullString());
+        }
+
+        [Fact]
         public void GetOrAddChildElementMultiple()
         {
             XmlElementBaseSyntax root = Parser.ParseText("<root></root>").Root;
@@ -315,6 +337,21 @@ namespace Microsoft.Language.Xml.Tests
                     </system.webServer>
                 </configuration>
                 """, root.ToFullString());
+        }
+
+        [Fact]
+        public void NormalizeTriviaUsesTheInsertionParentsIndentAtEveryLevel()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText(
+                "<configuration>\r\n\t<system.webServer>\r\n\t\t<rewrite />\r\n\t</system.webServer>\r\n</configuration>").Root;
+
+            XmlElementBaseSyntax parent = root.GetElement("system.webServer");
+            XmlElementBaseSyntax newParent = parent.AddChild(
+                XmlElement("security", XmlElement("ipSecurity")).NormalizeTrivia(parent));
+
+            Assert.Equal(
+                "<configuration>\r\n\t<system.webServer>\r\n\t\t<rewrite />\r\n\t\t<security>\r\n\t\t\t<ipSecurity />\r\n\t\t</security>\r\n\t</system.webServer>\r\n</configuration>",
+                root.ReplaceNode(parent, newParent).ToFullString());
         }
 
         [Fact]
