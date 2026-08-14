@@ -48,8 +48,10 @@
     <PackageIcon>language_xml_logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>Xml Parser</PackageTags>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!--
+      No symbol package: DebugType is embedded, so the PDB lives inside the assembly and a .snupkg
+      would ship with no .pdb in it. Consumers get symbols and SourceLink without a symbol server.
+    -->
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>True</SignAssembly>
