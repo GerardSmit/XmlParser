@@ -1,33 +1,51 @@
-name: .NET
+name: Publish
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      # Lets the job request the OIDC token that nuget.org exchanges for a
+      # short-lived API key. Trusted publishing does not work without this.
+      id-token: write
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            8.0.x
-
-      - name: Install dependencies
-        run: dotnet restore
+          dotnet-version: 8.0.x
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build --configuration Release
 
-      - name: Publish
-        uses: GerardSmit/publish-nuget@v3.1.3
+      - name: Test
+        run: dotnet test --configuration Release --no-build
+
+      - name: Pack
+        run: dotnet pack src/Microsoft.Language.Xml/Microsoft.Language.Xml.csproj --configuration Release --no-build --output artifacts
+
+      # Requested immediately before the push: the key is only valid for an hour.
+      - name: NuGet login
+        uses: NuGet/login@v1
+        id: login
         with:
-          NUGET_KEY: ${{secrets.NUGET_API_KEY}}
-          PROJECT_FILE_PATH: |
-            src/Microsoft.Language.Xml/Microsoft.Language.Xml.csproj
-      
+          # nuget.org profile name, not an email address.
+          user: GerardSmit
+
+      # --skip-duplicate: this runs on every push to main, so a commit that does
+      # not bump <Version> should be a no-op rather than a failed build.
+      - name: NuGet push
+        run: >
+          dotnet nuget push artifacts/*.nupkg
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
