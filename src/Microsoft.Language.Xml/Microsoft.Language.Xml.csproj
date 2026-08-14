@@ -34,6 +34,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)\..\..\language_xml_logo.png" Pack="true" PackagePath=""/>
+    <None Include="$(MSBuildThisFileDirectory)\..\..\README.md" Pack="true" PackagePath=""/>
   </ItemGroup>
   <PropertyGroup>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
@@ -45,6 +46,7 @@
     <PackageProjectUrl>https://github.com/GerardSmit/XmlParser</PackageProjectUrl>
     <RepositoryUrl>https://github.com/GerardSmit/XmlParser</RepositoryUrl>
     <PackageIcon>language_xml_logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>Xml Parser</PackageTags>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
