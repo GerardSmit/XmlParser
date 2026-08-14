@@ -391,23 +391,44 @@ namespace Microsoft.Language.Xml
             var depth = GetDepth(root);
             var last = trivia.Last().Text;
 
-            if (depth > 0)
+            if (depth == 0)
             {
-                var additionalLength = last.Length / depth;
-                var substr = last.Substring(0, additionalLength);
-
-                for (var i = 0; i < extra; i++)
-                {
-                    last += substr;
-                }
-            }
-            else
-            {
-                last += last;
+                // The root element has no indentation of its own to scale from - its leading trivia
+                // is just the newline after the XML declaration. Its existing children are what show
+                // how far one level indents in this document.
+                return trivia.Add(SyntaxFactory.WhitespaceTrivia(GetRootIndent(root, extra)));
             }
 
-            trivia = trivia.Replace(trivia.Last(), SyntaxFactory.WhitespaceTrivia(last));
-            return trivia;
+            var additionalLength = last.Length / depth;
+            var substr = last.Substring(0, additionalLength);
+
+            for (var i = 0; i < extra; i++)
+            {
+                last += substr;
+            }
+
+            return trivia.Replace(trivia.Last(), SyntaxFactory.WhitespaceTrivia(last));
+        }
+
+        /// <summary>
+        /// Derives one indent unit from the root element's existing children and repeats it
+        /// <paramref name="levels"/> times. Falls back to four spaces when the document has nothing
+        /// to learn from.
+        /// </summary>
+        private static string GetRootIndent(XmlElementBaseSyntax root, int levels)
+        {
+            var unit = root.Elements
+                .FirstOrDefault()?
+                .GetLeadingTrivia()
+                .LastOrDefault(x => x.Kind == SyntaxKind.WhitespaceTrivia)?
+                .Text;
+
+            if (string.IsNullOrEmpty(unit))
+            {
+                unit = "    ";
+            }
+
+            return string.Concat(Enumerable.Repeat(unit, Math.Max(levels, 1)));
         }
 
         private static int GetDepth(XmlElementBaseSyntax root)

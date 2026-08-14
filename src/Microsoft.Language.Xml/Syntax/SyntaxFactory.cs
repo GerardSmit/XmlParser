@@ -275,9 +275,11 @@ namespace Microsoft.Language.Xml
 
             if (children.Count == 0)
             {
+                // The "/>" carries its own leading space, so the name only needs a trailing one
+                // when there are attributes to separate it from.
                 return XmlEmptyElement(
                     LessThan,
-                    XmlName(null, XmlNameToken(name, null, Space)),
+                    XmlName(null, XmlNameToken(name, null, attributes.Count > 0 ? Space : null)),
                     attributes.ToList(),
                     Punctuation(SyntaxKind.SlashGreaterThanToken, "/>", Space, null)
                 );

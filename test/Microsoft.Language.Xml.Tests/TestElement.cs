@@ -316,5 +316,67 @@ namespace Microsoft.Language.Xml.Tests
                 </configuration>
                 """, root.ToFullString());
         }
+
+        [Fact]
+        public void NormalizeTriviaIndentsChildAddedToRootElement()
+        {
+            XmlDocumentSyntax doc = Parser.ParseText(
+                """
+                <?xml version="1.0" encoding="utf-8"?>
+                <configuration>
+                    <system.web>
+                        <compilation debug="true" />
+                    </system.web>
+                </configuration>
+                """);
+
+            XmlElementBaseSyntax root = doc.Root;
+            XmlElementBaseSyntax newRoot = root.AddChild(XmlElement("appSettings").NormalizeTrivia(root));
+
+            Assert.Equal(
+                """
+                <?xml version="1.0" encoding="utf-8"?>
+                <configuration>
+                    <system.web>
+                        <compilation debug="true" />
+                    </system.web>
+                    <appSettings />
+                </configuration>
+                """, doc.ReplaceNode(root, newRoot).ToFullString());
+        }
+
+        [Fact]
+        public void NormalizeTriviaIndentsNestedChildAddedToRootElement()
+        {
+            XmlDocumentSyntax doc = Parser.ParseText(
+                """
+                <?xml version="1.0" encoding="utf-8"?>
+                <configuration>
+                    <system.web>
+                        <compilation debug="true" />
+                    </system.web>
+                </configuration>
+                """);
+
+            XmlElementBaseSyntax root = doc.Root;
+            XmlElementBaseSyntax newRoot = root.AddChild(
+                XmlElement("system.webServer", XmlElement("security", XmlElement("ipSecurity")))
+                    .NormalizeTrivia(root));
+
+            Assert.Equal(
+                """
+                <?xml version="1.0" encoding="utf-8"?>
+                <configuration>
+                    <system.web>
+                        <compilation debug="true" />
+                    </system.web>
+                    <system.webServer>
+                        <security>
+                            <ipSecurity />
+                        </security>
+                    </system.webServer>
+                </configuration>
+                """, doc.ReplaceNode(root, newRoot).ToFullString());
+        }
     }
 }
