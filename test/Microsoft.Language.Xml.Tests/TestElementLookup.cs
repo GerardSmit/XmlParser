@@ -85,6 +85,16 @@ namespace Microsoft.Language.Xml.Tests
         }
 
         [Fact]
+        public void GetElementsByPathDistinguishesPrefix()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText(
+                "<root><a><x:b id=\"prefixed\" /><b id=\"plain\" /></a></root>").Root;
+
+            Assert.Equal("plain", root.GetElementsByPath("a/b").First().GetAttributeValue("id"));
+            Assert.Equal("prefixed", root.GetElementsByPath("a/x:b").First().GetAttributeValue("id"));
+        }
+
+        [Fact]
         public void GetElementsByPathReturnsEmptyWhenPathIsAbsent()
         {
             XmlElementBaseSyntax root = Parser.ParseText(WebConfig).Root;
@@ -98,6 +108,63 @@ namespace Microsoft.Language.Xml.Tests
             XmlElementBaseSyntax root = Parser.ParseText("<root />").Root;
 
             Assert.Throws<System.ArgumentException>(() => root.GetElementsByPath("a//b").ToArray());
+        }
+
+        [Fact]
+        public void FirstOrDefaultReturnsNullOnAnEmptyEnumerator()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root />").Root;
+
+            Assert.Null(root.Elements.FirstOrDefault());
+            Assert.Null(root.GetElements("a").FirstOrDefault());
+            Assert.Null(root.GetElementsByPath("a/b").FirstOrDefault());
+        }
+
+        [Fact]
+        public void FirstThrowsOnAnEmptyEnumerator()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root />").Root;
+
+            Assert.Throws<System.InvalidOperationException>(() => root.Elements.First());
+            Assert.Throws<System.InvalidOperationException>(() => root.GetElements("a").First());
+            Assert.Throws<System.InvalidOperationException>(() => root.GetElementsByPath("a/b").First());
+        }
+
+        [Fact]
+        public void FirstOrDefaultDoesNotAdvanceTheCallersEnumerator()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root><b id=\"1\" /><b id=\"2\" /></root>").Root;
+
+            var elements = root.GetElements("b");
+
+            Assert.Equal("1", elements.FirstOrDefault().GetAttributeValue("id"));
+
+            // The enumerator must still be positioned before the first element.
+            Assert.True(elements.MoveNext());
+            Assert.Equal("1", elements.Current.GetAttributeValue("id"));
+        }
+
+        [Fact]
+        public void PathEnumeratorCanBeEnumeratedTwice()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText(WebConfig).Root;
+
+            var found = root.GetElementsByPath("location/system.webServer/security/ipSecurity");
+
+            Assert.Equal(2, CountOf(found));
+            Assert.Equal(2, CountOf(found));
+        }
+
+        private static int CountOf(Collections.XmlPathElementEnumerator enumerator)
+        {
+            var count = 0;
+
+            foreach (XmlElementBaseSyntax _ in enumerator)
+            {
+                count++;
+            }
+
+            return count;
         }
 
         [Fact]

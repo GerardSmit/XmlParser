@@ -35,12 +35,7 @@ namespace Microsoft.Language.Xml
         /// </summary>
         public XmlElementBaseSyntax? GetElement(string localName, string? prefix = null)
         {
-            foreach (XmlElementBaseSyntax element in GetElements(localName, prefix))
-            {
-                return element;
-            }
-
-            return null;
+            return GetElements(localName, prefix).FirstOrDefault();
         }
 
         /// <summary>

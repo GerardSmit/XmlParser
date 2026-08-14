@@ -41,6 +41,25 @@ namespace Microsoft.Language.Xml.Collections
         {
         }
 
+        /// <summary>
+        /// The first matching element. Throws when there is none.
+        /// </summary>
+        public XmlElementBaseSyntax First()
+        {
+            return FirstOrDefault() ?? throw new InvalidOperationException("Sequence contains no elements.");
+        }
+
+        /// <summary>
+        /// The first matching element, or <c>null</c> when there is none.
+        /// </summary>
+        public XmlElementBaseSyntax? FirstOrDefault()
+        {
+            // Enumerate a copy so the caller's position is untouched.
+            XmlNamedElementEnumerator enumerator = this;
+
+            return enumerator.MoveNext() ? enumerator.Current : null;
+        }
+
         public bool MoveNext()
         {
             while (_elements.MoveNext())

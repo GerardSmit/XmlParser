@@ -32,6 +32,25 @@ namespace Microsoft.Language.Xml.Collections
         {
         }
 
+        /// <summary>
+        /// The first node. Throws when there is none.
+        /// </summary>
+        public SyntaxNode First()
+        {
+            return FirstOrDefault() ?? throw new InvalidOperationException("Sequence contains no elements.");
+        }
+
+        /// <summary>
+        /// The first node, or <c>null</c> when there is none.
+        /// </summary>
+        public SyntaxNode? FirstOrDefault()
+        {
+            // Enumerate a copy so the caller's position is untouched.
+            SyntaxNodeEnumerator enumerator = this;
+
+            return enumerator.MoveNext() ? enumerator.Current : null;
+        }
+
         public bool MoveNext()
         {
             while (_index < node.SlotCount)

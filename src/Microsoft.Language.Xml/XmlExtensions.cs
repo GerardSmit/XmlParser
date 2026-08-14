@@ -424,30 +424,9 @@ namespace Microsoft.Language.Xml
         /// Every segment is expanded, not just the last: a path through two <c>&lt;location&gt;</c>
         /// elements yields matches under both.
         /// </remarks>
-        public static IEnumerable<XmlElementBaseSyntax> GetElementsByPath(this XmlElementBaseSyntax node, string path)
+        public static XmlPathElementEnumerator GetElementsByPath(this XmlElementBaseSyntax node, string path)
         {
-            if (string.IsNullOrEmpty(path))
-            {
-                throw new ArgumentException("Path must not be empty.", nameof(path));
-            }
-
-            IEnumerable<XmlElementBaseSyntax> current = new[] { node };
-
-            foreach (var segment in path.Split('/'))
-            {
-                if (segment.Length == 0)
-                {
-                    throw new ArgumentException($"Path '{path}' contains an empty segment.", nameof(path));
-                }
-
-                var colon = segment.IndexOf(':');
-                var prefix = colon < 0 ? null : segment.Substring(0, colon);
-                var localName = colon < 0 ? segment : segment.Substring(colon + 1);
-
-                current = current.SelectMany(x => x.GetElements(localName, prefix));
-            }
-
-            return current;
+            return new XmlPathElementEnumerator(node, path);
         }
 
         /// <summary>
