@@ -6,7 +6,7 @@ namespace Microsoft.Language.Xml
 {
     public abstract class XmlElementBaseSyntax : XmlNodeSyntax, INamedXmlNode
     {
-        internal XmlElementBaseSyntax(Green green, SyntaxNode parent, int position) : base(green, parent, position)
+        internal XmlElementBaseSyntax(Green green, SyntaxNode? parent, int position) : base(green, parent, position)
         {
         }
 
@@ -16,7 +16,7 @@ namespace Microsoft.Language.Xml
         public abstract SyntaxList<SyntaxNode> Content { get; }
         public XmlElementBaseSyntax AsElement => this;
 
-        public new XmlElementBaseSyntax Parent => base.Parent as XmlElementBaseSyntax;
+        public new XmlElementBaseSyntax? Parent => base.Parent as XmlElementBaseSyntax;
 
         public abstract XmlElementEnumerator Elements { get; }
 
@@ -30,7 +30,7 @@ namespace Microsoft.Language.Xml
 
         protected internal abstract XmlElementBaseSyntax WithName(XmlNameSyntax newName);
 
-        public XmlAttributeSyntax GetAttribute(string localName, string prefix = null)
+        public XmlAttributeSyntax? GetAttribute(string localName, string? prefix = null)
         {
             foreach (XmlAttributeSyntax attr in AttributesNode)
             {
@@ -44,11 +44,11 @@ namespace Microsoft.Language.Xml
             return null;
         }
 
-        public string GetAttributeValue(string localName, string prefix = null)
+        public string? GetAttributeValue(string localName, string? prefix = null)
         {
             return GetAttribute(localName, prefix)?.Value;
         }
 
-        public string this[string attributeName] => GetAttributeValue(attributeName);
+        public string? this[string attributeName] => GetAttributeValue(attributeName);
     }
 }

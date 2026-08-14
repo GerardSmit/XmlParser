@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace Microsoft.Language.Xml
@@ -30,7 +31,7 @@ namespace Microsoft.Language.Xml
                 this._nodesToRemove = nodes;
                 this._options = options;
                 this._searchSpan = ComputeTotalSpan(nodes);
-                this._residualTrivia = null;
+                this._residualTrivia = SyntaxTriviaListBuilder.Create();
             }
 
             private static TextSpan ComputeTotalSpan(SyntaxList<SyntaxNode> nodes)
@@ -94,7 +95,8 @@ namespace Microsoft.Language.Xml
                 return node.FullSpan.IntersectsWith(this._searchSpan) || (this._residualTrivia != null && this._residualTrivia.Count > 0);
             }
 
-            public override SyntaxNode Visit(SyntaxNode node)
+            [return: NotNullIfNotNull(nameof(node))]
+            public override SyntaxNode? Visit(SyntaxNode? node)
             {
                 var result = node;
                 if (node != null)

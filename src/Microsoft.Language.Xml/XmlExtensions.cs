@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.Language.Xml.Collections;
@@ -32,6 +33,7 @@ namespace Microsoft.Language.Xml
         {
             var existingName = element.NameNode;
             var existingPrefix = existingName.PrefixNode;
+            Debug.Assert(existingPrefix != null);
             var newName = SyntaxFactory.XmlNameToken(prefixName, null, null);
 
             return (T)element.WithName(existingName.WithPrefix(existingPrefix.WithName(newName)));
@@ -63,6 +65,7 @@ namespace Microsoft.Language.Xml
         {
             var existingName = attribute.NameNode;
             var existingPrefix = existingName.PrefixNode;
+            Debug.Assert(existingPrefix != null);
             var newName = SyntaxFactory.XmlNameToken(prefixName, null, null);
 
             return attribute.WithName(existingName.WithPrefix(existingPrefix.WithName(newName)));
@@ -109,6 +112,7 @@ namespace Microsoft.Language.Xml
         internal static bool IsXmlNodeName(this XmlNameSyntax name)
         {
             var p = name.Parent;
+            if (p == null) return false;
             switch (p.Kind)
             {
                 case SyntaxKind.XmlElement:
@@ -151,7 +155,7 @@ namespace Microsoft.Language.Xml
         public static T SetAttribute<T>(this T element, string attributeName, string value)
             where T : XmlElementBaseSyntax
         {
-            XmlAttributeSyntax attribute = element.GetAttribute(attributeName);
+            XmlAttributeSyntax? attribute = element.GetAttribute(attributeName);
             XmlStringSyntax newValue = SyntaxFactory.XmlString(
                 SyntaxFactory.Punctuation(SyntaxKind.DoubleQuoteToken, "\"", null, null),
                 SyntaxFactory.List([
@@ -198,7 +202,7 @@ namespace Microsoft.Language.Xml
             return newRule;
         }
 
-        public static XmlElementSyntax GetOrAddElement(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax> configure = null)
+        public static XmlElementSyntax GetOrAddElement(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax>? configure = null)
         {
             if (name.Contains("/"))
             {
@@ -209,7 +213,7 @@ namespace Microsoft.Language.Xml
             return root.GetOrAddElementCore(name, out result, configure).Node;
         }
 
-        public static XmlElementSyntax AddElement(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax> configure = null)
+        public static XmlElementSyntax AddElement(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax>? configure = null)
         {
             if (name.Contains("/"))
             {
@@ -224,7 +228,7 @@ namespace Microsoft.Language.Xml
             return root.AddElementCore(name, out result, configure).Node;
         }
 
-        private static XmlElementSyntax GetOrAddByPath<T>(T parts, XmlElementBaseSyntax root, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
+        private static XmlElementSyntax GetOrAddByPath<T>(T parts, XmlElementBaseSyntax root, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax>? configure)
             where T : IList<string>
         {
             var i = 0;
@@ -240,10 +244,12 @@ namespace Microsoft.Language.Xml
                 {
                     path.Clear();
 
-                    if (!parent.TryReplaceXmlNode(result, next, out parent, path))
+                    if (!parent.TryReplaceXmlNode(result, next, out var newParent, path))
                     {
                         throw new InvalidOperationException();
                     }
+
+                    parent = newParent;
 
                     path.Add(index);
                     result = parent.GetElementByPath(path);
@@ -257,7 +263,7 @@ namespace Microsoft.Language.Xml
             return parent;
         }
 
-        private static (XmlElementSyntax Node, bool Changed, int Index) GetOrAddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
+        private static (XmlElementSyntax Node, bool Changed, int Index) GetOrAddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax>? configure)
         {
             SyntaxList<SyntaxNode>.Enumerator enumerator = root.Content.GetEnumerator();
 
@@ -280,7 +286,7 @@ namespace Microsoft.Language.Xml
             return (newRoot, true, index);
         }
 
-        private static (XmlElementSyntax Node, int Index) AddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax> configure)
+        private static (XmlElementSyntax Node, int Index) AddElementCore(this XmlElementBaseSyntax root, string name, out XmlElementBaseSyntax result, Func<XmlElementBaseSyntax, XmlElementBaseSyntax, XmlElementBaseSyntax>? configure)
         {
             result = SyntaxFactory.XmlEmptyElement(
                 SyntaxFactory.LessThan,
@@ -307,7 +313,7 @@ namespace Microsoft.Language.Xml
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static TSelf NormalizeTrivia<TSelf>(this TSelf node, XmlElementBaseSyntax parent, int extra = 1)
+        public static TSelf NormalizeTrivia<TSelf>(this TSelf node, XmlElementBaseSyntax? parent, int extra = 1)
             where TSelf : XmlElementBaseSyntax
         {
             if (parent != null)
@@ -367,7 +373,7 @@ namespace Microsoft.Language.Xml
             }
             else
             {
-                XmlElementBaseSyntax element = root.Elements.FirstOrDefault();
+                XmlElementBaseSyntax? element = root.Elements.FirstOrDefault();
 
                 if (element is not null && element.HasLeadingTrivia)
                 {

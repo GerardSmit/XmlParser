@@ -36,7 +36,7 @@ namespace Microsoft.Language.Xml.Collections
         {
             while (_index < node.SlotCount)
             {
-                SyntaxNode current = node.GetNodeSlot(_index);
+                SyntaxNode? current = node.GetNodeSlot(_index);
                 _index++;
 
                 if (current != null)
@@ -46,7 +46,7 @@ namespace Microsoft.Language.Xml.Collections
                 }
             }
 
-            Current = null;
+            Current = null!;
             return false;
         }
 
@@ -55,7 +55,7 @@ namespace Microsoft.Language.Xml.Collections
             _index = 0;
         }
 
-        public SyntaxNode Current { get; private set; }
+        public SyntaxNode Current { get; private set; } = null!;
 
         object IEnumerator.Current => Current;
     }

@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+
 
 namespace Microsoft.Language.Xml
 {
@@ -12,9 +13,9 @@ namespace Microsoft.Language.Xml
     public readonly struct SyntaxList<TNode> : IReadOnlyList<TNode>, IEquatable<SyntaxList<TNode>>
         where TNode : SyntaxNode
     {
-        private readonly SyntaxNode _node;
+        private readonly SyntaxNode? _node;
 
-        internal SyntaxList(SyntaxNode node)
+        internal SyntaxList(SyntaxNode? node)
         {
             _node = node;
         }
@@ -37,7 +38,7 @@ namespace Microsoft.Language.Xml
         {
         }
 
-        private static SyntaxNode CreateNode(IEnumerable<TNode> nodes)
+        private static SyntaxNode? CreateNode(IEnumerable<TNode> nodes)
         {
             if (nodes == null)
             {
@@ -56,7 +57,7 @@ namespace Microsoft.Language.Xml
             return builder.ToList().Node;
         }
 
-        internal SyntaxNode Node
+        internal SyntaxNode? Node
         {
             get
             {
@@ -90,7 +91,7 @@ namespace Microsoft.Language.Xml
                     {
                         if (unchecked((uint)index < (uint)_node.SlotCount))
                         {
-                            return (TNode)_node.GetNodeSlot(index);
+                            return (TNode)_node.GetNodeSlot(index)!;
                         }
                     }
                     else if (index == 0)
@@ -104,9 +105,10 @@ namespace Microsoft.Language.Xml
 
         internal SyntaxNode ItemInternal(int index)
         {
+            Debug.Assert(_node != null);
             if (_node.IsList)
             {
-                return _node.GetNodeSlot(index);
+                return _node.GetNodeSlot(index)!;
             }
 
             Debug.Assert(index == 0);
@@ -159,7 +161,7 @@ namespace Microsoft.Language.Xml
         /// </returns>
         public override string ToString()
         {
-            return _node != null ? _node.ToString() : string.Empty;
+            return _node?.ToString() ?? string.Empty;
         }
 
         /// <summary>
@@ -358,6 +360,7 @@ namespace Microsoft.Language.Xml
             }
 
             var newGreen = creator.CreateList(items.Select(n => n.GreenNode));
+            Debug.Assert(newGreen != null);
             return new SyntaxList<TNode>(newGreen.CreateRed());
         }
 
@@ -372,7 +375,7 @@ namespace Microsoft.Language.Xml
         /// <summary>
         /// The first node in the list or default if the list is empty.
         /// </summary>
-        public TNode FirstOrDefault()
+        public TNode? FirstOrDefault()
         {
             if (this.Any())
             {
@@ -395,7 +398,7 @@ namespace Microsoft.Language.Xml
         /// <summary>
         /// The last node in the list or default if the list is empty.
         /// </summary>
-        public TNode LastOrDefault()
+        public TNode? LastOrDefault()
         {
             if (this.Any())
             {
@@ -465,7 +468,7 @@ namespace Microsoft.Language.Xml
             return _node == other._node;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return obj is SyntaxList<TNode> && Equals((SyntaxList<TNode>)obj);
         }
@@ -618,7 +621,7 @@ namespace Microsoft.Language.Xml
                 _index = -1;
             }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 throw new NotSupportedException();
             }

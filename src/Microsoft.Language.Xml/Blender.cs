@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+
 
 namespace Microsoft.Language.Xml
 {
@@ -9,9 +10,9 @@ namespace Microsoft.Language.Xml
     internal sealed class Blender : Scanner
     {
         private readonly Stack<GreenNode> _nodeStack = new Stack<GreenNode>();
-        private readonly TextChangeRange[] _changes;
-        private readonly TextSpan[] _affectedRanges;
-        private GreenNode _currentNode;
+        private readonly TextChangeRange[]? _changes;
+        private readonly TextSpan[]? _affectedRanges;
+        private GreenNode? _currentNode;
         private int _curNodeStart;
         private int _curNodeLength;
         private readonly SyntaxNode _baseTreeRoot;
@@ -44,14 +45,13 @@ namespace Microsoft.Language.Xml
                 var change = changes[i];
                 var node = root.FindNode(change.Span.Start, includeTrivia: false);
                 MarkNodeHierarchyDirty(allSpans, node, changes, i);
-                /* Check if the position maps to the start of a node with leading trivia
-                 * or if the change affected the tail end of the buffer. In both those
-                 * cases it's more likely that the node affected by the change is
-                 * actually the previous one. In that situation we also mark that chain
-                 * as well so that we don't end up with an incorrect parsing
+                /* Also mark the node at the position before the change as dirty.
+                 * When an insertion happens at a node boundary (e.g. appending to
+                 * an attribute name), FindNode returns the following node rather
+                 * than the one being edited. Marking the previous position ensures
+                 * the correct node is invalidated.
                  */
-                if ((change.Span.Start > 0 && node.HasLeadingTrivia && node.Start == change.Span.Start)
-                    || change.Span.Start >= root.FullWidth)
+                if (change.Span.Start > 0)
                 {
                     node = root.FindNode(change.Span.Start - 1, includeTrivia: false);
                     MarkNodeHierarchyDirty(allSpans, node, changes, i);
@@ -98,13 +98,13 @@ namespace Microsoft.Language.Xml
             return TextSpan.FromBounds(start, end);
         }
 
-        internal override GreenNode GetCurrentSyntaxNode()
+        internal override GreenNode? GetCurrentSyntaxNode()
         {
             if (_currentNode == null)
                 return null;
             var start = _currentToken.Position;
 
-            if (_affectedRanges.AnyContainsPosition(start))
+            if (_affectedRanges != null && _affectedRanges.AnyContainsPosition(start))
                 return null;
             var nonterminal = GetCurrentNode(start);
             return nonterminal;
@@ -134,7 +134,8 @@ namespace Microsoft.Language.Xml
             for (int i = 1; i <= cnt; i++)
             {
                 var child = nonterminal.GetSlot(cnt - i);
-                PushChildReverse(stack, child);
+                if (child != null)
+                    PushChildReverse(stack, child);
             }
         }
 
@@ -151,17 +152,15 @@ namespace Microsoft.Language.Xml
 
         private static void PushChildReverse(Stack<GreenNode> stack, GreenNode child)
         {
-            if (child != null)
-            {
-                if (child.IsList)
-                    PushReverseNonterminal(stack, child);
-                else
-                    stack.Push(child);
-            }
+            if (child.IsList)
+                PushReverseNonterminal(stack, child);
+            else
+                stack.Push(child);
         }
 
         private int MapNewPositionToOldTree(int position)
         {
+            Debug.Assert(_changes != null);
             foreach (var change in _changes)
             {
                 if (position < change.Span.Start)
@@ -191,7 +190,7 @@ namespace Microsoft.Language.Xml
 
         private static bool ShouldCrumble(GreenNode node) => true;
 
-        private GreenNode GetCurrentNode(int position)
+        private GreenNode? GetCurrentNode(int position)
         {
             Debug.Assert(_currentNode != null);
             var mappedPosition = MapNewPositionToOldTree(position);
@@ -218,7 +217,7 @@ namespace Microsoft.Language.Xml
             return _currentNode;
         }
 
-        private bool CanReuseNode(GreenNode node)
+        private bool CanReuseNode(GreenNode? node)
         {
             if (node == null)
                 return false;
@@ -232,6 +231,7 @@ namespace Microsoft.Language.Xml
             Debug.Assert(_curNodeSpan.Length > 0);
             if (_curNodeSpan.OverlapsWithAny(_affectedRanges))
                 return false;*/
+            Debug.Assert(_currentNode != null);
             if (_currentNode.IsMissing)
                 return false;
             return true;

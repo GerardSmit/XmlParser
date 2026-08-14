@@ -63,7 +63,7 @@ namespace Microsoft.Language.Xml.Collections
             _current = 0;
         }
 
-        public XmlElementBaseSyntax Current { get; private set; }
+        public XmlElementBaseSyntax Current { get; private set; } = null!;
 
         object IEnumerator.Current => Current;
     }

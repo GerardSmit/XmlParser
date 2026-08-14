@@ -43,7 +43,7 @@ namespace Microsoft.Language.Xml
             return false;
         }
 
-        internal virtual GreenNode GetCurrentSyntaxNode()
+        internal virtual GreenNode? GetCurrentSyntaxNode()
         {
             return null;
         }
@@ -68,7 +68,7 @@ namespace Microsoft.Language.Xml
             return tk;
         }
 
-        internal SyntaxToken.Green PrevToken
+        internal SyntaxToken.Green? PrevToken
         {
             get
             {
@@ -116,7 +116,7 @@ namespace Microsoft.Language.Xml
             _currentToken = new ScannerToken(_lineBufferOffset, _endOfTerminatorTrivia, null, state);
         }
 
-        internal SyntaxToken.Green PeekNextToken(ScannerState state)
+        internal SyntaxToken.Green? PeekNextToken(ScannerState state)
         {
             if (_tokens.Count > 0)
             {
@@ -164,7 +164,7 @@ namespace Microsoft.Language.Xml
 
         private SyntaxToken.Green GetScannerToken(ScannerState state)
         {
-            SyntaxToken.Green token = null;
+            SyntaxToken.Green? token = null;
 
             switch (state)
             {
@@ -858,7 +858,7 @@ namespace Microsoft.Language.Xml
             bool isFirst = true;
             ERRID err = ERRID.ERR_None;
             int errUnicode = 0;
-            string errChar = null;
+            string? errChar = null;
 
             // TODO - Fix ScanXmlNCName to conform to XML spec instead of old loose scanning.
             while (CanGetCharAtOffset(Here))
@@ -944,7 +944,7 @@ namespace Microsoft.Language.Xml
                 if (err != ERRID.ERR_None)
                 {
                     name = name.WithDiagnostics(ErrorFactory.ErrorInfo(
-                        err, errChar, string.Format("&H{0:X}", errUnicode)));
+                        err, errChar ?? string.Empty, string.Format("&H{0:X}", errUnicode)));
                 }
 
                 return name;
@@ -957,22 +957,23 @@ namespace Microsoft.Language.Xml
             return MissingToken(precedingTrivia, SyntaxKind.XmlNameToken);
         }
 
-        private XmlNameTokenSyntax.Green XmlMakeXmlNCNameToken(GreenNode precedingTrivia, int tokenWidth)
+        private XmlNameTokenSyntax.Green XmlMakeXmlNCNameToken(GreenNode? precedingTrivia, int tokenWidth)
         {
             Debug.Assert(tokenWidth > 0);
+            // The preceding trivia, name text, and following whitespace form a
+            // contiguous region in the source buffer. Hash and compare directly
+            // from the buffer to avoid allocating a concatenated cache key string.
+            var precedingTriviaWidth = precedingTrivia?.FullWidth ?? 0;
+            var keyStart = _lineBufferOffset - precedingTriviaWidth;
             var text = GetText(tokenWidth);
             var followingTrivia = ScanXmlWhitespace();
-            // TODO: do something more efficient than create an intermediary string
-            // for instance augment TextKeyedCache to work directly on the Buffer
-            // instance instead of string or char[]
-            var key = (precedingTrivia == null ? string.Empty : precedingTrivia.ToFullString())
-                + text
-                + (followingTrivia == null ? string.Empty : followingTrivia.ToFullString());
-            var hashCode = Hash.GetFNVHashCode(key);
-            var nameToken = _nameTokenCache.FindItem(key, 0, key.Length, hashCode);
+            var followingTriviaWidth = followingTrivia?.FullWidth ?? 0;
+            var keyLength = precedingTriviaWidth + tokenWidth + followingTriviaWidth;
+            var hashCode = Hash.GetFNVHashCode(buffer.GetSpan(keyStart, keyLength));
+            var nameToken = _nameTokenCache.FindItem(buffer, keyStart, keyLength, hashCode);
             if (nameToken == null) {
                 nameToken = new XmlNameTokenSyntax.Green(text, precedingTrivia, followingTrivia);
-                _nameTokenCache.AddItem(key, 0, key.Length, hashCode, nameToken);
+                _nameTokenCache.AddItem(buffer, keyStart, keyLength, hashCode, nameToken);
             }
 
             return nameToken;
@@ -1242,7 +1243,7 @@ namespace Microsoft.Language.Xml
 
             AdvanceChar();
 
-            GreenNode followingTrivia = null;
+            GreenNode? followingTrivia = null;
             if (!isOpening)
             {
                 var ws = ScanXmlWhitespace();
@@ -1268,7 +1269,7 @@ namespace Microsoft.Language.Xml
 
             AdvanceChar();
 
-            GreenNode followingTrivia = null;
+            GreenNode? followingTrivia = null;
             if (!isOpening)
             {
                 var ws = ScanXmlWhitespace();
@@ -1565,7 +1566,7 @@ namespace Microsoft.Language.Xml
                         var result = ScanXmlCharRef(ref Here);
                         if (result.Length != 0)
                         {
-                            string value = null;
+                            string? value = null;
                             if (result.Length == 1)
                             {
                                 value = Intern(result.Char1);
@@ -1580,11 +1581,11 @@ namespace Microsoft.Language.Xml
 
                             if (CanGetCharAtOffset(Here) && PeekAheadChar(Here) == ';')
                             {
-                                return XmlMakeEntityLiteralToken(precedingTrivia, Here + 1, value);
+                                return XmlMakeEntityLiteralToken(precedingTrivia, Here + 1, value ?? "");
                             }
                             else
                             {
-                                var noSemicolon = XmlMakeEntityLiteralToken(precedingTrivia, Here, value);
+                                var noSemicolon = XmlMakeEntityLiteralToken(precedingTrivia, Here, value ?? "");
                                 var noSemicolonError = ErrorFactory.ErrorInfo(ERRID.ERR_ExpectedSColon);
                                 return ((XmlTextTokenSyntax.Green)noSemicolon.SetDiagnostics(new[]
                                 {
@@ -2016,15 +2017,33 @@ namespace Microsoft.Language.Xml
             return Punctuation(SyntaxKind.LessThanToken, "<", precedingTrivia, followingTrivia);
         }
 
-        private GreenNode ScanXmlWhitespace()
+        private GreenNode? ScanXmlWhitespace()
         {
             int length = GetXmlWhitespaceLength();
             if (length > 0)
             {
-                return MakeWhiteSpaceTrivia(GetText(length));
+                return MakeWhiteSpaceTriviaFromBuffer(length);
             }
 
             return null;
+        }
+
+        private GreenNode MakeWhiteSpaceTriviaFromBuffer(int length)
+        {
+            var hashCode = Hash.GetFNVHashCode(buffer.GetSpan(_lineBufferOffset, length));
+            var ws = _triviaCache.FindItem(buffer, _lineBufferOffset, length, hashCode);
+            if (ws == null)
+            {
+                var text = GetText(length);
+                ws = new SyntaxTrivia.Green(SyntaxKind.WhitespaceTrivia, text);
+                _triviaCache.AddItem(text, 0, text.Length, hashCode, ws);
+            }
+            else
+            {
+                AdvanceChar(length);
+            }
+
+            return ws;
         }
 
         private int GetXmlWhitespaceLength()
@@ -2220,7 +2239,7 @@ namespace Microsoft.Language.Xml
 
         protected readonly struct ScannerToken
         {
-            internal ScannerToken(int lineBufferOffset, int endOfTerminatorTrivia, SyntaxToken.Green token, ScannerState state)
+            internal ScannerToken(int lineBufferOffset, int endOfTerminatorTrivia, SyntaxToken.Green? token, ScannerState state)
             {
                 this.Position = lineBufferOffset;
                 this.EndOfTerminatorTrivia = endOfTerminatorTrivia;
@@ -2228,12 +2247,12 @@ namespace Microsoft.Language.Xml
                 this.State = state;
             }
 
-            internal ScannerToken With(ScannerState state, SyntaxToken.Green token)
+            internal ScannerToken With(ScannerState state, SyntaxToken.Green? token)
             {
                 return new ScannerToken(this.Position, this.EndOfTerminatorTrivia, token, state);
             }
 
-            internal readonly SyntaxToken.Green InnerTokenObject;
+            internal readonly SyntaxToken.Green? InnerTokenObject;
             internal readonly int Position;
             internal readonly int EndOfTerminatorTrivia;
             internal readonly ScannerState State;

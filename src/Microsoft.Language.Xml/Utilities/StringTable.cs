@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -75,17 +75,17 @@ namespace Microsoft.Language.Xml
         // implement Poolable object pattern
         #region "Poolable"
 
-        private StringTable(ObjectPool<StringTable> pool)
+        private StringTable(ObjectPool<StringTable>? pool)
         {
             this.pool = pool;
         }
 
-        private readonly ObjectPool<StringTable> pool;
+        private readonly ObjectPool<StringTable>? pool;
         private static readonly ObjectPool<StringTable> StaticPool = CreatePool();
 
         private static ObjectPool<StringTable> CreatePool()
         {
-            ObjectPool<StringTable> pool = null;
+            ObjectPool<StringTable>? pool = null;
             pool = new ObjectPool<StringTable>(() => new StringTable(pool), Environment.ProcessorCount * 2);
             return pool;
         }
@@ -101,6 +101,7 @@ namespace Microsoft.Language.Xml
             // Array.Clear(this.localTable, 0, this.localTable.Length);
             // Array.Clear(sharedTable, 0, sharedTable.Length);
 
+            Debug.Assert(pool != null);
             pool.Free(this);
         }
 
@@ -125,7 +126,7 @@ namespace Microsoft.Language.Xml
                 }
             }
 
-            string shared = FindSharedEntry(chars, start, len, hashCode);
+            string? shared = FindSharedEntry(chars, start, len, hashCode);
             if (shared != null)
             {
                 // PERF: the following code does elementwise assignment of a struct
@@ -159,7 +160,7 @@ namespace Microsoft.Language.Xml
                 }
             }
 
-            string shared = FindSharedEntry(chars, start, len, hashCode);
+            string? shared = FindSharedEntry(chars, start, len, hashCode);
             if (shared != null)
             {
                 // PERF: the following code does elementwise assignment of a struct
@@ -172,6 +173,40 @@ namespace Microsoft.Language.Xml
             }
 
             return AddItem(chars, start, len, hashCode);
+        }
+
+        internal string Add(ReadOnlySpan<char> chars)
+        {
+            var hashCode = Hash.GetFNVHashCode(chars);
+
+            // capture array to avoid extra range checks
+            var arr = localTable;
+            var idx = LocalIdxFromHash(hashCode);
+
+            var text = arr[idx].Text;
+
+            if (text != null && arr[idx].HashCode == hashCode)
+            {
+                var result = arr[idx].Text;
+                if (result.AsSpan().SequenceEqual(chars))
+                {
+                    return result;
+                }
+            }
+
+            string? shared = FindSharedEntry(chars, hashCode);
+            if (shared != null)
+            {
+                // PERF: the following code does elementwise assignment of a struct
+                //       because current JIT produces better code compared to
+                //       arr[idx] = new Entry(...)
+                arr[idx].HashCode = hashCode;
+                arr[idx].Text = shared;
+
+                return shared;
+            }
+
+            return AddItem(chars, hashCode);
         }
 
         internal string Add(char chars)
@@ -193,7 +228,7 @@ namespace Microsoft.Language.Xml
                 }
             }
 
-            string shared = FindSharedEntry(chars, hashCode);
+            string? shared = FindSharedEntry(chars, hashCode);
             if (shared != null)
             {
                 // PERF: the following code does elementwise assignment of a struct
@@ -227,7 +262,7 @@ namespace Microsoft.Language.Xml
                 }
             }
 
-            string shared = FindSharedEntry(chars, hashCode);
+            string? shared = FindSharedEntry(chars, hashCode);
             if (shared != null)
             {
                 // PERF: the following code does elementwise assignment of a struct
@@ -261,7 +296,7 @@ namespace Microsoft.Language.Xml
                 }
             }
 
-            string shared = FindSharedEntry(chars, hashCode);
+            string? shared = FindSharedEntry(chars, hashCode);
             if (shared != null)
             {
                 // PERF: the following code does elementwise assignment of a struct
@@ -277,12 +312,12 @@ namespace Microsoft.Language.Xml
             return chars;
         }
 
-        private static string FindSharedEntry(char[] chars, int start, int len, int hashCode)
+        private static string? FindSharedEntry(char[] chars, int start, int len, int hashCode)
         {
             var arr = sharedTable;
             int idx = SharedIdxFromHash(hashCode);
 
-            string e = null;
+            string? e = null;
             // we use quadratic probing here
             // bucket positions are (n^2 + n)/2 relative to the masked hashcode
             for (int i = 1; i < SharedBucketSize + 1; i++)
@@ -312,12 +347,12 @@ namespace Microsoft.Language.Xml
             return e;
         }
 
-        private static string FindSharedEntry(string chars, int start, int len, int hashCode)
+        private static string? FindSharedEntry(string chars, int start, int len, int hashCode)
         {
             var arr = sharedTable;
             int idx = SharedIdxFromHash(hashCode);
 
-            string e = null;
+            string? e = null;
             // we use quadratic probing here
             // bucket positions are (n^2 + n)/2 relative to the masked hashcode
             for (int i = 1; i < SharedBucketSize + 1; i++)
@@ -347,12 +382,47 @@ namespace Microsoft.Language.Xml
             return e;
         }
 
-        private static string FindSharedEntry(char chars, int hashCode)
+        private static string? FindSharedEntry(ReadOnlySpan<char> chars, int hashCode)
         {
             var arr = sharedTable;
             int idx = SharedIdxFromHash(hashCode);
 
-            string e = null;
+            string? e = null;
+            // we use quadratic probing here
+            // bucket positions are (n^2 + n)/2 relative to the masked hashcode
+            for (int i = 1; i < SharedBucketSize + 1; i++)
+            {
+                e = arr[idx].Text;
+                int hash = arr[idx].HashCode;
+
+                if (e != null)
+                {
+                    if (hash == hashCode && e.AsSpan().SequenceEqual(chars))
+                    {
+                        break;
+                    }
+
+                    // this is not e we are looking for
+                    e = null;
+                }
+                else
+                {
+                    // once we see unfilled entry, the rest of the bucket will be empty
+                    break;
+                }
+
+                idx = (idx + i) & SharedSizeMask;
+            }
+
+            return e;
+        }
+
+        private static string? FindSharedEntry(char chars, int hashCode)
+        {
+            var arr = sharedTable;
+            int idx = SharedIdxFromHash(hashCode);
+
+            string? e = null;
             // we use quadratic probing here
             // bucket positions are (n^2 + n)/2 relative to the masked hashcode
             for (int i = 1; i < SharedBucketSize + 1; i++)
@@ -381,12 +451,12 @@ namespace Microsoft.Language.Xml
             return e;
         }
 
-        private static string FindSharedEntry(StringBuilder chars, int hashCode)
+        private static string? FindSharedEntry(StringBuilder chars, int hashCode)
         {
             var arr = sharedTable;
             int idx = SharedIdxFromHash(hashCode);
 
-            string e = null;
+            string? e = null;
             // we use quadratic probing here
             // bucket positions are (n^2 + n)/2 relative to the masked hashcode
             for (int i = 1; i < SharedBucketSize + 1; i++)
@@ -416,12 +486,12 @@ namespace Microsoft.Language.Xml
             return e;
         }
 
-        private static string FindSharedEntry(string chars, int hashCode)
+        private static string? FindSharedEntry(string chars, int hashCode)
         {
             var arr = sharedTable;
             int idx = SharedIdxFromHash(hashCode);
 
-            string e = null;
+            string? e = null;
             // we use quadratic probing here
             // bucket positions are (n^2 + n)/2 relative to the masked hashcode
             for (int i = 1; i < SharedBucketSize + 1; i++)
@@ -463,7 +533,13 @@ namespace Microsoft.Language.Xml
             var text = chars.Substring(start, len);
             AddCore(text, hashCode);
             return text;
+        }
 
+        private string AddItem(ReadOnlySpan<char> chars, int hashCode)
+        {
+            var text = chars.ToString();
+            AddCore(text, hashCode);
+            return text;
         }
 
         private string AddItem(char chars, int hashCode)
@@ -526,7 +602,7 @@ namespace Microsoft.Language.Xml
         {
             var hashCode = Hash.GetFNVHashCode(chars);
 
-            string shared = FindSharedEntry(chars, hashCode);
+            string? shared = FindSharedEntry(chars, hashCode);
             if (shared != null)
             {
                 return shared;

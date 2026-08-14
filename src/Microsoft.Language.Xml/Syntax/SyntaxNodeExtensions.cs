@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Collections.Generic;
 using Microsoft.Language.Xml.Collections;
@@ -83,7 +85,7 @@ namespace Microsoft.Language.Xml
                         return (TRoot)(object)newElement;
                     }
 
-                    return TryReplaceXmlNode(baseSyntax, oldElement, newElement, out XmlElementSyntax result)
+                    return TryReplaceXmlNode(baseSyntax, oldElement, newElement, out XmlElementSyntax? result)
                         ? (TRoot)(object)result
                         : root;
                 }
@@ -95,7 +97,7 @@ namespace Microsoft.Language.Xml
                         return (TRoot)(object)document.WithBody(newElement);
                     }
 
-                    if (TryReplaceXmlNode(document.Root, oldElement, newElement, out XmlElementSyntax result))
+                    if (TryReplaceXmlNode(document.Root, oldElement, newElement, out XmlElementSyntax? result))
                     {
                         return (TRoot)(object)document.WithBody(result);
                     }
@@ -105,7 +107,7 @@ namespace Microsoft.Language.Xml
             return (TRoot)root.ReplaceCore(nodes: new SyntaxList<SyntaxNode>(oldNode), computeReplacementNode: (o, r) => newNode);
         }
 
-        internal static bool TryReplaceXmlNode(this XmlElementBaseSyntax baseSyntax, XmlElementBaseSyntax oldElement, XmlElementBaseSyntax newElement, out XmlElementSyntax result, List<int> path = null)
+        internal static bool TryReplaceXmlNode(this XmlElementBaseSyntax? baseSyntax, XmlElementBaseSyntax oldElement, XmlElementBaseSyntax newElement, [NotNullWhen(true)] out XmlElementSyntax? result, List<int>? path = null)
         {
             if (baseSyntax is null)
             {
@@ -127,7 +129,7 @@ namespace Microsoft.Language.Xml
                     return true;
                 }
 
-                if (TryReplaceXmlNode(enumerator.Current as XmlElementSyntax, oldElement, newElement, out XmlElementSyntax newChild, path))
+                if (TryReplaceXmlNode(enumerator.Current as XmlElementSyntax, oldElement, newElement, out XmlElementSyntax? newChild, path))
                 {
                     result = baseSyntax.WithContent(
                         baseSyntax.Content.Replace(enumerator.CurrentIndex, newChild)
@@ -356,6 +358,7 @@ namespace Microsoft.Language.Xml
             SyntaxNode trivia) where TSyntax : SyntaxNode
         {
             var first = node.GetFirstToken();
+            Debug.Assert(first != null);
             var newFirst = first.WithLeadingTrivia(trivia);
             return node.ReplaceToken(first, newFirst);
         }
@@ -365,9 +368,10 @@ namespace Microsoft.Language.Xml
         /// </summary>
         public static TSyntax WithLeadingTrivia<TSyntax>(
             this TSyntax node,
-            IEnumerable<SyntaxTrivia> trivia) where TSyntax : SyntaxNode
+            IEnumerable<SyntaxTrivia>? trivia) where TSyntax : SyntaxNode
         {
             var first = node.GetFirstToken();
+            Debug.Assert(first != null);
             var newFirst = first.WithLeadingTrivia(trivia);
             return node.ReplaceToken(first, newFirst);
         }
@@ -387,7 +391,7 @@ namespace Microsoft.Language.Xml
         /// </summary>
         public static TSyntax WithoutLeadingTrivia<TSyntax>(this TSyntax node) where TSyntax : SyntaxNode
         {
-            return node.WithLeadingTrivia((IEnumerable<SyntaxTrivia>)null);
+            return node.WithLeadingTrivia((IEnumerable<SyntaxTrivia>?)null);
         }
 
         /// <summary>
@@ -398,6 +402,7 @@ namespace Microsoft.Language.Xml
             SyntaxNode trivia) where TSyntax : SyntaxNode
         {
             var last = node.GetLastToken();
+            Debug.Assert(last != null);
             var newLast = last.WithTrailingTrivia(trivia);
             return node.ReplaceToken(last, newLast);
         }
@@ -407,9 +412,10 @@ namespace Microsoft.Language.Xml
         /// </summary>
         public static TSyntax WithTrailingTrivia<TSyntax>(
             this TSyntax node,
-            IEnumerable<SyntaxTrivia> trivia) where TSyntax : SyntaxNode
+            IEnumerable<SyntaxTrivia>? trivia) where TSyntax : SyntaxNode
         {
             var last = node.GetLastToken();
+            Debug.Assert(last != null);
             var newLast = last.WithTrailingTrivia(trivia);
             return node.ReplaceToken(last, newLast);
         }
@@ -429,7 +435,7 @@ namespace Microsoft.Language.Xml
         /// </summary>
         public static TSyntax WithoutTrailingTrivia<TSyntax>(this TSyntax node) where TSyntax : SyntaxNode
         {
-            return node.WithTrailingTrivia((IEnumerable<SyntaxTrivia>)null);
+            return node.WithTrailingTrivia((IEnumerable<SyntaxTrivia>?)null);
         }
 
         /// <summary>
