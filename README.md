@@ -12,17 +12,40 @@ In comparison to the original project, this fork has the following changes:
 - Added various enumerators for nodes, XML attributes and XML elements.  
   **Reason:** before the iterator methods were used, which generated a state machine and allocates memory. The enumerators are more efficient and don't allocate memory.
 
+  The enumerators also have their own `First` and `FirstOrDefault`, because reaching the LINQ ones boxes the enumerator.
+
 - Improved `ReplaceNode` for XML elements.  
   **Reason:** Before a visitor was used to replace nodes, which allocated more memory and was less efficient.
 
 - Added the following utility methods:
   - `GetOrAddElement` - gets or adds an element to the XML tree, with support for paths. For example:
     ```cs
-    root = root.GetOrAddElement('Project/PropertyGroup', out var propertyGroup)
+    root = root.GetOrAddElement("Project/PropertyGroup", out var propertyGroup);
     ```
   - `SetAttribute` - sets an attribute of an element. If the attribute does not exist, it is added.
     ```cs
     propertyGroup = propertyGroup.SetAttribute("TargetFramework", "net9.0");
+    ```
+  - `GetElement` / `GetElements` - the child elements with a given name, mirroring `GetAttribute` down to the optional prefix.
+    ```cs
+    XmlElementBaseSyntax propertyGroup = root.GetElement("PropertyGroup");
+
+    foreach (XmlElementBaseSyntax reference in root.GetElements("PackageReference"))
+    {
+        // ...
+    }
+    ```
+  - `GetElementsByPath` - every element reachable by a slash-separated child path. Unlike a hand-rolled walker, it expands *every* segment rather than taking the first match at each step, so a path crossing repeated ancestors sees all of them.
+    ```cs
+    foreach (XmlElementBaseSyntax ipSecurity in root.GetElementsByPath("location/system.webServer/security/ipSecurity"))
+    {
+        // one per <location>, not just the first
+    }
+    ```
+  - `GetIndentUnit`, `GetIndent` and `GetNewLine` - what the document already does for formatting, so new nodes can be placed to match it without reimplementing `NormalizeTrivia`.
+    ```cs
+    string unit = root.GetIndentUnit();  // e.g. "    " or "\t"
+    string newLine = root.GetNewLine();  // "\r\n" or "\n"
     ```
 
 **Original README:**
