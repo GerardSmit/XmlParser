@@ -14,6 +14,9 @@ namespace Microsoft.Language.Xml.Editor
         private ITextBuffer buffer;
         private OutliningTaggerProvider outliningTaggerProvider;
 
+        private XmlNodeSyntax lastRoot;
+        private ITextSnapshot lastRootSnapshot;
+
         public OutliningTagger(OutliningTaggerProvider outliningTaggerProvider, ITextBuffer buffer)
             : base(outliningTaggerProvider.ParserService)
         {
@@ -40,29 +43,62 @@ namespace Microsoft.Language.Xml.Editor
 
             if (task.Status == TaskStatus.RanToCompletion)
             {
-                var root = task.Result;
-                var elementSpans = new List<Tuple<Span, string>>();
-                CollectElementSpans(root, elementSpans, 0);
-                var tagSpans = new List<TagSpan<IOutliningRegionTag>>();
-                foreach (var span in elementSpans)
+                lastRoot = task.Result;
+                lastRootSnapshot = snapshot;
+            }
+            else
+            {
+                task.ContinueWith(t =>
                 {
-                    if (snapshot.GetLineNumberFromPosition(span.Item1.Start) < snapshot.GetLineNumberFromPosition(span.Item1.End))
-                    {
-                        tagSpans.Add(new TagSpan<IOutliningRegionTag>(
-                            new SnapshotSpan(snapshot, span.Item1),
-                            new OutliningRegionTag(span.Item2, span.Item2)));
-                    }
-                }
-
-                return tagSpans;
+                    lastRoot = t.Result;
+                    lastRootSnapshot = snapshot;
+                    RaiseTagsChanged(snapshot);
+                }, TaskContinuationOptions.OnlyOnRanToCompletion);
             }
 
-            task.ContinueWith(t =>
+            // While a parse for a newer snapshot is still running, keep serving the tags from
+            // the last completed parse, translated forward. Returning an empty list here makes
+            // the outlining manager treat all collapsed regions in the queried spans as removed
+            // and expand them.
+            var root = lastRoot;
+            var rootSnapshot = lastRootSnapshot;
+            if (root == null || rootSnapshot == null)
             {
-                RaiseTagsChanged(snapshot);
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                return emptyTagList;
+            }
 
-            return emptyTagList;
+            var elementSpans = new List<Tuple<Span, string>>();
+            CollectElementSpans(root, elementSpans, 0);
+            var tagSpans = new List<TagSpan<IOutliningRegionTag>>();
+            int previousStartLine = -1;
+            foreach (var span in elementSpans)
+            {
+                if (span.Item1.End > rootSnapshot.Length)
+                {
+                    continue;
+                }
+
+                int startLine = rootSnapshot.GetLineNumberFromPosition(span.Item1.Start);
+                if (startLine >= rootSnapshot.GetLineNumberFromPosition(span.Item1.End))
+                {
+                    continue;
+                }
+
+                // nested elements starting on the same line: the outer one is enough
+                if (startLine == previousStartLine)
+                {
+                    continue;
+                }
+
+                previousStartLine = startLine;
+
+                var tagSnapshotSpan = new SnapshotSpan(rootSnapshot, span.Item1).TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive);
+                tagSpans.Add(new TagSpan<IOutliningRegionTag>(
+                    tagSnapshotSpan,
+                    new OutliningRegionTag(span.Item2, span.Item2)));
+            }
+
+            return tagSpans;
         }
 
         private void CollectElementSpans(SyntaxNode node, List<Tuple<Span, string>> spans, int start)
@@ -86,7 +122,7 @@ namespace Microsoft.Language.Xml.Editor
         private void RaiseTagsChanged(ITextSnapshot snapshot)
         {
             TagsChanged?.Invoke(
-                this, 
+                this,
                 new SnapshotSpanEventArgs(
                     new SnapshotSpan(snapshot, 0, snapshot.Length)));
         }
