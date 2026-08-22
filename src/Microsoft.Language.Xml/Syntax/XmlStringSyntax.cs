@@ -114,6 +114,27 @@ namespace Microsoft.Language.Xml
             }
         }
 
+        /// <summary>
+        /// The span of the text between the quotes.
+        /// </summary>
+        /// <remarks>
+        /// Narrowing <see cref="SyntaxNode.Span"/> by one at each end is wrong in a buffer being
+        /// typed into: an unterminated value has a synthesized, zero-width closing quote, so the
+        /// end of the value is the end of the node rather than one character before it. Each bound
+        /// is therefore taken from its quote token only when that token is really there.
+        /// </remarks>
+        public TextSpan ValueSpan
+        {
+            get
+            {
+                TextSpan span = Span;
+                var start = StartQuoteToken is { Width: > 0 } startQuote ? startQuote.Span.End : span.Start;
+                var end = EndQuoteToken is { Width: > 0 } endQuote ? endQuote.Span.Start : span.End;
+
+                return TextSpan.FromBounds(start, Math.Max(start, end));
+            }
+        }
+
         public XmlStringSyntax Update(PunctuationSyntax startQuoteToken, SyntaxList<SyntaxNode> textTokens, PunctuationSyntax endQuoteToken)
         {
             if (startQuoteToken != this.StartQuoteToken || textTokens != this.TextTokens || endQuoteToken != this.EndQuoteToken)

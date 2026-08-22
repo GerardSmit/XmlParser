@@ -991,9 +991,11 @@ namespace Microsoft.Language.Xml
                         Convert.ToInt32(ch.Char1) <= 0xDBFF &&
                         Convert.ToInt32(ch.Char2) >= 0xDC00 &&
                         Convert.ToInt32(ch.Char2) <= 0xDFFF);
-                    return (
-                        Convert.ToInt32(ch.Char1) - 0xD800) << 10 +
-                        (Convert.ToInt32(ch.Char2) - 0xDC00) + 0x10000;
+                    // The parentheses are load-bearing: "+" binds tighter than "<<", so without
+                    // them this shifts by (10 + low + 0x10000) and reports a code point at random.
+                    return ((Convert.ToInt32(ch.Char1) - 0xD800) << 10)
+                        + (Convert.ToInt32(ch.Char2) - 0xDC00)
+                        + 0x10000;
             }
 
             return 0;

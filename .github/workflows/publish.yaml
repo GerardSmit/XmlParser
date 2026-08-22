@@ -31,7 +31,9 @@ jobs:
         run: dotnet test --configuration Release --no-build
 
       - name: Pack
-        run: dotnet pack src/Microsoft.Language.Xml/Microsoft.Language.Xml.csproj --configuration Release --no-build --output artifacts
+        run: |
+          dotnet pack src/Microsoft.Language.Xml/Microsoft.Language.Xml.csproj --configuration Release --no-build --output artifacts
+          dotnet pack src/Microsoft.Language.Xml.Roslyn/Microsoft.Language.Xml.Roslyn.csproj --configuration Release --no-build --output artifacts
 
       # Requested immediately before the push: the key is only valid for an hour.
       - name: NuGet login

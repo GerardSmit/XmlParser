@@ -13,14 +13,19 @@ namespace Microsoft.Language.Xml.Collections
 
         public int CurrentIndex => _index - 1;
 
+        /// <summary>
+        /// A walk over the whole sequence. An enumerator that has already been advanced hands out
+        /// the sequence from the start rather than the remainder of its own, so that enumerating
+        /// twice yields the same nodes twice.
+        /// </summary>
         public SyntaxNodeEnumerator GetEnumerator()
         {
-            return this;
+            return new SyntaxNodeEnumerator(node);
         }
 
         IEnumerator<SyntaxNode> IEnumerable<SyntaxNode>.GetEnumerator()
         {
-            return this;
+            return GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -45,8 +50,10 @@ namespace Microsoft.Language.Xml.Collections
         /// </summary>
         public SyntaxNode? FirstOrDefault()
         {
-            // Enumerate a copy so the caller's position is untouched.
-            SyntaxNodeEnumerator enumerator = this;
+            // A fresh enumerator, not a copy of this one: "first" has to mean the first whether or
+            // not this enumerator has already been walked, and copying the position makes it mean
+            // "next" instead. GetEnumerator leaves the caller's own position untouched either way.
+            SyntaxNodeEnumerator enumerator = GetEnumerator();
 
             return enumerator.MoveNext() ? enumerator.Current : null;
         }

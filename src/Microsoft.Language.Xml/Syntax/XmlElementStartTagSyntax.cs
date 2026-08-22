@@ -90,6 +90,23 @@ namespace Microsoft.Language.Xml
 
         public string Name => NameNode.FullName;
 
+        /// <summary>
+        /// The span of the name inside this tag. Empty, but positioned just past the "&lt;", for
+        /// a tag whose name is still to be typed. With <see cref="XmlElementEndTagSyntax.NameSpan"/>
+        /// this is the pair a rename or linked editing edits.
+        /// </summary>
+        public TextSpan NameSpan
+        {
+            get
+            {
+                XmlNameSyntax? name = NameNode;
+
+                return name is not null
+                    ? name.Span
+                    : new TextSpan(LessThanToken is { } lessThan ? lessThan.Span.End : Span.Start, 0);
+            }
+        }
+
         internal XmlElementStartTagSyntax(Green green, SyntaxNode? parent, int position)
             : base(green, parent, position)
         {

@@ -74,8 +74,16 @@ namespace Microsoft.Language.Xml
         XmlStringSyntax? valueNode;
 
         public XmlNameSyntax NameNode => GetRed(ref nameNode, 0)!;
-        public new PunctuationSyntax Equals => GetRed(ref equalsSyntax, 1)!;
-        public XmlStringSyntax ValueNode => GetRed(ref valueNode, 2)!;
+        /// <summary>
+        /// The <c>=</c> joining the name to the value, or <c>null</c> for an attribute written as a
+        /// bare name. Note that the parser synthesizes a zero-width one rather than leaving it out,
+        /// so only an attribute built by hand answers <c>null</c> here - see <see cref="ValueNode"/>.
+        /// </summary>
+        public new PunctuationSyntax? Equals => GetRed(ref equalsSyntax, 1);
+        /// <summary>
+        /// The quoted value, or <c>null</c> for an attribute written as a bare name.
+        /// </summary>
+        public XmlStringSyntax? ValueNode => GetRed(ref valueNode, 2);
 
         internal XmlAttributeSyntax(Green green, SyntaxNode? parent, int position)
             : base(green, parent, position)
@@ -88,24 +96,36 @@ namespace Microsoft.Language.Xml
         public bool IsNamespaceDeclaration => string.Equals(NameNode.Prefix, "xmlns", StringComparison.Ordinal);
 
         /// <summary>
-        /// Get attribute normalized value
+        /// The attribute's value: normalized per the XML spec and with entity references resolved.
+        /// This is what the attribute says; <see cref="RawValue"/> is how it is written.
+        /// </summary>
+        public string Value => XmlEscaping.Decode(RawValue);
+
+        /// <summary>
+        /// Get attribute normalized value, entity references left as they appear in the document.
         /// </summary>
         /// <remarks>
         /// Normalization specs:
-        /// <seealso href="https://www.w3.org/TR/2006/REC-xml11-20060816/#sec-line-ends">2.2.12 [XML] Section 3.3.3</seealso/>
-        /// <seealso href="https://learn.microsoft.com/en-us/openspecs/ie_standards/ms-xml/389b8ef1-e19e-40ac-80de-eec2cd0c58ae">2.11 [XML} End-of-Line Handling</seealso/>
+        /// <seealso href="https://www.w3.org/TR/2006/REC-xml11-20060816/#sec-line-ends">2.2.12 [XML] Section 3.3.3</seealso>
+        /// <seealso href="https://learn.microsoft.com/en-us/openspecs/ie_standards/ms-xml/389b8ef1-e19e-40ac-80de-eec2cd0c58ae">2.11 [XML] End-of-Line Handling</seealso>
         /// </remarks>
-        public string Value
+        public string RawValue
         {
             get
             {
-                return ValueNode.TextTokens.Node switch
+                return ValueNode?.TextTokens.Node switch
                 {
                     SyntaxNode node => node.GetNormalizedAttributeValue(),
                     _ => string.Empty
                 };
             }
         }
+
+        /// <summary>
+        /// The span of the value inside its quotes - what a squiggle covers and what an edit
+        /// replaces. Empty, positioned just past the name, for an attribute with no value.
+        /// </summary>
+        public TextSpan ValueSpan => ValueNode?.ValueSpan ?? new TextSpan(Span.End, 0);
 
         public override SyntaxNode Accept(SyntaxVisitor visitor)
         {
@@ -134,7 +154,7 @@ namespace Microsoft.Language.Xml
             }
         }
 
-        public XmlAttributeSyntax Update(XmlNameSyntax name, PunctuationSyntax equalsToken, XmlStringSyntax value)
+        public XmlAttributeSyntax Update(XmlNameSyntax name, PunctuationSyntax? equalsToken, XmlStringSyntax? value)
         {
             if (name != this.NameNode || equalsToken != this.Equals || value != this.ValueNode)
             {
@@ -153,7 +173,7 @@ namespace Microsoft.Language.Xml
             return this.Update(name, this.Equals, this.ValueNode);
         }
 
-        public XmlAttributeSyntax WithEqualsToken(PunctuationSyntax equalsToken)
+        public XmlAttributeSyntax WithEqualsToken(PunctuationSyntax? equalsToken)
         {
             return this.Update(this.NameNode, equalsToken, this.ValueNode);
         }

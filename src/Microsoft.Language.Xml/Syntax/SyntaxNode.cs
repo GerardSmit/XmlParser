@@ -504,6 +504,17 @@ namespace Microsoft.Language.Xml
             return node == this ? this : node;
         }
 
+        /// <summary>
+        /// The diagnostics attached to this node.
+        /// </summary>
+        /// <remarks>
+        /// This is not a well-formedness check. The parser is deliberately error-tolerant - it is
+        /// built for editors, where the document is malformed most of the time it is looked at -
+        /// and it stays quiet about things a validating reader would reject, an element with no
+        /// name among them. Round-tripping output through <see cref="Parser.ParseText(string)"/>
+        /// and checking this therefore proves less than it looks like it does; use an
+        /// <c>XmlReader</c> when the question is whether a document is valid XML.
+        /// </remarks>
         public DiagnosticInfo[] GetDiagnostics() => GreenNode.GetDiagnostics();
 
         public bool ContainsDiagnostics => GreenNode.ContainsDiagnostics;

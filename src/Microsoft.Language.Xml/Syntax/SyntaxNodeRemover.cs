@@ -211,9 +211,7 @@ namespace Microsoft.Language.Xml
         /// </summary>
         KeepEndOfLine = 0x10,
 
-        /// <summary>
-        /// Adds elastic marker trivia
-        /// </summary>
+        // Adds elastic marker trivia
         //AddElasticMarker = 0x20
     }
 }

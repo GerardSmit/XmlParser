@@ -131,7 +131,12 @@ namespace Microsoft.Language.Xml
 
         public override SyntaxList<SyntaxNode> Content => default(SyntaxList<SyntaxNode>);
 
-        public override string Value => "";
+        public override string RawValue => "";
+
+        /// <summary>
+        /// Empty, positioned where content would start if the element were opened.
+        /// </summary>
+        public override TextSpan ContentSpan => new TextSpan(SlashGreaterThanToken.Span.Start, 0);
 
         public XmlElementEnumerator XmlElements => default;
 
@@ -170,8 +175,39 @@ namespace Microsoft.Language.Xml
         public override XmlElementSyntax WithContent(SyntaxList<SyntaxNode> content)
         {
             var greaterThanToken = SyntaxFactory.Punctuation(SyntaxKind.GreaterThanToken, ">", null, null);
-            var startName = this.AttributesNode.Count == 0 ? this.NameNode.WithTrailingTrivia() : this.NameNode.WithTrailingTrivia(SyntaxFactory.Space);
-            var startTag = SyntaxFactory.XmlElementStartTag(this.LessThanToken, startName, this.AttributesNode, greaterThanToken);
+            SyntaxList<XmlAttributeSyntax> attributes = this.AttributesNode;
+            XmlNameSyntax startName;
+
+            if (attributes.Count == 0)
+            {
+                // Nothing left to separate the name from: the ">" goes straight after it.
+                startName = this.NameNode.WithTrailingTrivia();
+            }
+            else
+            {
+                // Whatever already separates the name from the first attribute is kept as it is;
+                // a space is only added when neither side carries one, which would otherwise run
+                // them together.
+                startName = this.NameNode.HasTrailingTrivia || attributes[0].HasLeadingTrivia
+                    ? this.NameNode
+                    : this.NameNode.WithTrailingTrivia(SyntaxFactory.Space);
+
+                // Trailing whitespace on the last attribute only ever separated it from the "/>".
+                // The ">" replacing it needs no separator, and keeping the space would show up as
+                // a diff on a line the caller never edited. Only the attribute's own trivia is
+                // touched: a line break laying the attributes out over several lines belongs to
+                // the "/>" token instead, and goes when that token does - there is nothing this
+                // method can do to keep it.
+                var lastIndex = attributes.Count - 1;
+                XmlAttributeSyntax last = attributes[lastIndex];
+
+                if (last.HasTrailingTrivia && IsWhitespaceOnly(last.GetTrailingTrivia()))
+                {
+                    attributes = attributes.Replace(lastIndex, last.WithTrailingTrivia());
+                }
+            }
+
+            var startTag = SyntaxFactory.XmlElementStartTag(this.LessThanToken, startName, attributes, greaterThanToken);
             var lessThanSlashToken = SyntaxFactory.Punctuation(SyntaxKind.LessThanSlashToken, "</", null, null);
             var endTag = SyntaxFactory.XmlElementEndTag(lessThanSlashToken, this.NameNode.WithTrailingTrivia(), greaterThanToken);
             var newNode = SyntaxFactory.XmlElement(startTag, content, endTag);
@@ -180,6 +216,19 @@ namespace Microsoft.Language.Xml
                 return newNode.WithAnnotations(annotations);
 
             return newNode;
+        }
+
+        private static bool IsWhitespaceOnly(SyntaxTriviaList trivia)
+        {
+            foreach (SyntaxTrivia item in trivia)
+            {
+                if (item.Kind != SyntaxKind.WhitespaceTrivia)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public XmlEmptyElementSyntax WithSlashGreaterThanToken(PunctuationSyntax slashGreaterThanToken)

@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Microsoft.Language.Xml.Roslyn</AssemblyName>
+    <TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <DebugType>embedded</DebugType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <Version>2.1.0</Version>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors Condition="'$(TargetFramework)' == 'net8.0'">$(WarningsAsErrors);nullable</WarningsAsErrors>
+    <NoWarn Condition="'$(TargetFramework)' != 'net8.0'">$(NoWarn);nullable</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Language.Xml\Microsoft.Language.Xml.csproj" />
+    <!--
+      The floor, not a pin: any consumer of this package is doing editor work and already has a
+      Microsoft.CodeAnalysis of its own, which resolves upward from here. The core package stays
+      dependency-free precisely because this reference lives in this optional one.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.0.1" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All"/>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)\..\..\language_xml_logo.png" Pack="true" PackagePath=""/>
+    <None Include="$(MSBuildThisFileDirectory)\..\..\README.md" Pack="true" PackagePath=""/>
+  </ItemGroup>
+  <PropertyGroup>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageId>GerardSmit.Language.Xml.Roslyn</PackageId>
+    <Authors>GerardSmit, Microsoft</Authors>
+    <Summary>Roslyn interop for GerardSmit.Language.Xml</Summary>
+    <Description>Conversions between GerardSmit.Language.Xml's TextSpan and Microsoft.CodeAnalysis.Text.TextSpan, for consumers turning parse results into editor ranges. Kept out of the core package so it stays dependency-free.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/GerardSmit/XmlParser</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/GerardSmit/XmlParser</RepositoryUrl>
+    <PackageIcon>language_xml_logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>Xml Parser Roslyn</PackageTags>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>True</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\..\key.snk</AssemblyOriginatorKeyFile>
+    <DelaySign>False</DelaySign>
+  </PropertyGroup>
+</Project>

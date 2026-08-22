@@ -8,6 +8,14 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <Version>2.1.0</Version>
     <Nullable>enable</Nullable>
+    <!--
+      Ship the doc comments: most of what this fork adds is explained in them, and without the
+      file none of it reaches a consumer's tooltip. CS1591 and CS1573 stay off: the ported parser
+      is largely undocumented and always has been, and a comment that explains the one parameter
+      worth explaining is better than one padded out with a tag per parameter to satisfy them.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
     <WarningsAsErrors Condition="'$(TargetFramework)' == 'net8.0'">$(WarningsAsErrors);nullable</WarningsAsErrors>
     <NoWarn Condition="'$(TargetFramework)' != 'net8.0'">$(NoWarn);nullable</NoWarn>
   </PropertyGroup>

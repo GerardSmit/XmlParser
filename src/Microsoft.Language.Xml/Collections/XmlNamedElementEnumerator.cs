@@ -12,24 +12,46 @@ namespace Microsoft.Language.Xml.Collections
     {
         private readonly string _localName;
         private readonly string? _prefix;
+        private readonly bool _matchAnyPrefix;
+        private readonly StringComparison _comparison;
         private XmlElementEnumerator _elements;
 
         public XmlNamedElementEnumerator(SyntaxList<SyntaxNode> content, string localName, string? prefix)
+            : this(content, localName, prefix, matchAnyPrefix: false, StringComparison.Ordinal)
+        {
+        }
+
+        public XmlNamedElementEnumerator(
+            SyntaxList<SyntaxNode> content,
+            string localName,
+            string? prefix,
+            bool matchAnyPrefix,
+            StringComparison comparison)
         {
             _localName = localName;
             _prefix = prefix;
+            _matchAnyPrefix = matchAnyPrefix;
+            _comparison = comparison;
             _elements = new XmlElementEnumerator(content);
             Current = null!;
         }
 
+        /// <summary>
+        /// A walk over the whole sequence. An enumerator that has already been advanced hands out
+        /// the sequence from the start rather than the remainder of its own, so that enumerating
+        /// twice yields the same elements twice.
+        /// </summary>
         public XmlNamedElementEnumerator GetEnumerator()
         {
-            return this;
+            XmlNamedElementEnumerator enumerator = this;
+            enumerator.Reset();
+
+            return enumerator;
         }
 
         IEnumerator<XmlElementBaseSyntax> IEnumerable<XmlElementBaseSyntax>.GetEnumerator()
         {
-            return this;
+            return GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -54,8 +76,10 @@ namespace Microsoft.Language.Xml.Collections
         /// </summary>
         public XmlElementBaseSyntax? FirstOrDefault()
         {
-            // Enumerate a copy so the caller's position is untouched.
-            XmlNamedElementEnumerator enumerator = this;
+            // A fresh enumerator, not a copy of this one: "first" has to mean the first whether or
+            // not this enumerator has already been walked, and copying the position makes it mean
+            // "next" instead. GetEnumerator leaves the caller's own position untouched either way.
+            XmlNamedElementEnumerator enumerator = GetEnumerator();
 
             return enumerator.MoveNext() ? enumerator.Current : null;
         }
@@ -65,10 +89,8 @@ namespace Microsoft.Language.Xml.Collections
             while (_elements.MoveNext())
             {
                 XmlElementBaseSyntax element = _elements.Current;
-                XmlNameSyntax name = element.NameNode;
 
-                if (string.Equals(name.LocalName, _localName, StringComparison.Ordinal) &&
-                    string.Equals(name.Prefix, _prefix, StringComparison.Ordinal))
+                if (XmlNameMatcher.Matches(element.NameNode, _localName, _prefix, _matchAnyPrefix, _comparison))
                 {
                     Current = element;
                     return true;
@@ -82,6 +104,7 @@ namespace Microsoft.Language.Xml.Collections
         public void Reset()
         {
             _elements.Reset();
+            Current = null!;
         }
 
         public XmlElementBaseSyntax Current { get; private set; }

@@ -102,12 +102,37 @@ namespace Microsoft.Language.Xml.Tests
             Assert.Empty(root.GetElementsByPath("location/system.web/compilation"));
         }
 
-        [Fact]
-        public void GetElementsByPathRejectsEmptySegment()
+        [Theory]
+        [InlineData("")]
+        [InlineData("/")]
+        [InlineData("a//b")]
+        [InlineData("a/b/")]
+        public void GetElementsByPathRejectsEmptySegment(string path)
         {
             XmlElementBaseSyntax root = Parser.ParseText("<root />").Root;
 
-            Assert.Throws<System.ArgumentException>(() => root.GetElementsByPath("a//b").ToArray());
+            Assert.Throws<System.ArgumentException>(() => root.GetElementsByPath(path).ToArray());
+        }
+
+        [Fact]
+        public void GetElementsByPathAcceptsALeadingSlash()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText(WebConfig).Root;
+
+            var found = root
+                .GetElementsByPath("/location/system.webServer/security/ipSecurity")
+                .Select(x => x.GetAttributeValue("allowUnlisted"))
+                .ToArray();
+
+            Assert.Equal(new[] { "true", "false" }, found);
+        }
+
+        [Fact]
+        public void GetElementsByPathAcceptsALeadingSlashOnASingleSegment()
+        {
+            XmlElementBaseSyntax root = Parser.ParseText("<root><a id=\"1\" /></root>").Root;
+
+            Assert.Equal("1", root.GetElementsByPath("/a").First().GetAttributeValue("id"));
         }
 
         [Fact]
@@ -176,11 +201,13 @@ namespace Microsoft.Language.Xml.Tests
         }
 
         [Fact]
-        public void GetIndentUnitFallsBackToFourSpaces()
+        public void GetIndentUnitFallsBackToTwoSpaces()
         {
+            // The same answer the trivia calculation gives when a document says nothing about its
+            // own indentation - one fallback, so two near-identical documents cannot get two.
             XmlElementBaseSyntax root = Parser.ParseText("<root><a /></root>").Root;
 
-            Assert.Equal("    ", root.GetIndentUnit());
+            Assert.Equal("  ", root.GetIndentUnit());
         }
 
         [Fact]

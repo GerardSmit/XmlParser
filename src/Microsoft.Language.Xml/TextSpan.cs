@@ -44,6 +44,18 @@ namespace Microsoft.Language.Xml
         public int Length { get; }
 
         /// <summary>
+        /// Splits the span into its start and length, so it converts to another span type - an
+        /// editor's, Roslyn's - without naming this one: <c>var (start, length) = span;</c>.
+        /// This type shares its simple name with <c>Microsoft.CodeAnalysis.Text.TextSpan</c>, and
+        /// a file using both otherwise carries an alias for whichever it names second.
+        /// </summary>
+        public void Deconstruct(out int start, out int length)
+        {
+            start = Start;
+            length = Length;
+        }
+
+        /// <summary>
         /// Determines whether or not the span is empty.
         /// </summary>
         public bool IsEmpty => this.Length == 0;

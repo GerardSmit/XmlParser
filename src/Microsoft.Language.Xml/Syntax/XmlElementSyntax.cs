@@ -123,7 +123,38 @@ namespace Microsoft.Language.Xml
 
         public XmlElementEnumerator XmlElements => new(Content);
 
-        public override string Value => Content.ToFullString();
+        // Whitespace running up to the end tag is kept as that tag's trivia rather than as
+        // content, so it has to be asked for there. Without it this is not the text the element
+        // spans - it disagrees with ContentSpan, and with Value, about where the content ends.
+        public override string RawValue => Content.ToFullString() + ContentTrailingTrivia;
+
+        /// <inheritdoc/>
+        protected override string ContentTrailingTrivia => EndTag?.GetLeadingTrivia().ToFullString() ?? string.Empty;
+
+        /// <summary>
+        /// The range between "&gt;" and "&lt;/", which is empty but still positioned when the
+        /// element has no content.
+        /// </summary>
+        public override TextSpan ContentSpan
+        {
+            get
+            {
+                var start = StartTag.Span.End;
+
+                // The parser always synthesizes an end tag, zero-width where the document has none,
+                // but a hand-built element may genuinely have no end tag at all - the factory takes
+                // one that is null. Either way the span ends where the content does.
+                if (EndTag is null)
+                {
+                    return TextSpan.FromBounds(start, Math.Max(start, Content.Span.End));
+                }
+
+                // An unclosed element in a buffer being typed into has a zero-width end tag sitting
+                // at the same offset as everything else the parser synthesized; taking the later of
+                // the two bounds keeps the span from running backwards.
+                return TextSpan.FromBounds(start, Math.Max(start, EndTag.Span.Start));
+            }
+        }
 
         public override XmlElementEnumerator Elements => new(Content);
 

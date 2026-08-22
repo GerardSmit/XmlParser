@@ -6,22 +6,44 @@
 ## Changes
 In comparison to the original project, this fork has the following changes:
 
+> [!IMPORTANT]
+> 3.0.0 changes what two existing members mean. `Value` — on elements and attributes alike — now returns the decoded text rather than the raw markup; `RawValue` is the old behaviour. `AddChild` and `InsertChild` now indent the child they add; pass `indent: false` for the old behaviour. Both changes are silent at the call site, so it is worth grepping for them on upgrade. `XmlAttributeSyntax.Equals` and `ValueNode` are also nullable now - they always could be `null`, for an attribute written as a bare name, and the type now says so.
+
 - Removed the interfaces `IXmlElement` and `IXmlElementSyntax`.  
   **Reason:** this made editing the syntax tree more difficult, as the interfaces had to be cast to the SyntaxNode constantly. As replacement a new class called `XmlElementBaseSyntax` was introduced.
 
 - Added various enumerators for nodes, XML attributes and XML elements.  
   **Reason:** before the iterator methods were used, which generated a state machine and allocates memory. The enumerators are more efficient and don't allocate memory.
 
-  The enumerators also have their own `First` and `FirstOrDefault`, because reaching the LINQ ones boxes the enumerator.
+  The enumerators also have their own `First` and `FirstOrDefault`, because reaching the LINQ ones boxes the enumerator. They start a fresh walk rather than continuing from wherever the enumerator happens to sit, so `foreach`, `First` and `Count` mean the same thing whatever order they are called in — a struct enumerator that hands out itself otherwise gives the second reader the tail of the first one's walk.
 
 - Improved `ReplaceNode` for XML elements.  
   **Reason:** Before a visitor was used to replace nodes, which allocated more memory and was less efficient.
+
+- Values are escaped on the way in and decoded on the way out.  
+  **Reason:** `SetAttribute` and the string-taking factories used to write their argument verbatim, so a value containing `&`, `<` or a quote produced a document that no longer parsed — and the caller had no way to opt in, because the parameter is a `string`. They now escape. In the other direction `Value` resolves the five entities XML predefines plus numeric character references, unwraps CDATA sections and skips comments; `RawValue` is the text exactly as the document has it.
+  ```cs
+  root = root.SetAttribute("Include", "A&B<C");   // Include="A&amp;B&lt;C"
+  root.GetAttributeValue("Include");              // A&B<C
+  root.GetAttribute("Include").RawValue;          // A&amp;B&lt;C
+  ```
+  Whitespace between an element's tags counts as its value, the way it does to an `XDocument` loaded with `LoadOptions.PreserveWhitespace` — this is a tree that keeps every character of the document, so discarding some of it here was never on offer. The scanner keeps whitespace that runs up to a tag as that tag's trivia rather than as content, so `WithText(" ")` used to write a document whose `Value` read back empty, and `<a>\n  <b>x</b>\n</a>` used to say its value was just `x`. `RawValue` covers the same range, which is exactly the text `ContentSpan` points at.
+
+  Line endings follow the same rule a conforming reader does (XML 1.0 §2.11): a literal CRLF or lone CR in the document — in text, in whitespace between tags, or inside a CDATA section — reads back as one LF, while `&#xD;` is how a document says it means a carriage return and comes back as one. `RawValue` is untouched either way, and the escaping helpers write `&#xD;` so a value containing a CR survives the round trip.
+
+  `XmlEscaping.EncodeText`, `XmlEscaping.EncodeAttributeValue`, `XmlEscaping.NormalizeLineEndings` and `XmlEscaping.Decode` are public for callers doing their own formatting. `Decode` resolves only what XML defines — an unrecognised reference such as `&nbsp;`, which has no meaning without a DTD, is left exactly as it was found rather than turned into a character the document does not contain.
+
+  `SetAttribute` and `WithValue` also keep the quote character the attribute was already written with, and give a valueless attribute (`<a x />`, which an editor sees constantly) a real `=` rather than a value with nothing joining it to the name. `SetAttribute` reads a `:` in the name as a prefix, so `SetAttribute("xmlns:p", …)` finds its own attribute again on the next call instead of appending a duplicate, and it places a new attribute *in front of* one that is still being typed (`<a x= />`), which would otherwise swallow the value it was given.
+
+- `AddChild` and `InsertChild` indent by default.  
+  **Reason:** they used to weld the new child to its sibling, which turned a one-line diff into a reformatted line. The indent unit and the line ending are taken from what the document already does. Pass `indent: false` for the old behaviour.
 
 - Added the following utility methods:
   - `GetOrAddElement` - gets or adds an element to the XML tree, with support for paths. For example:
     ```cs
     root = root.GetOrAddElement("Project/PropertyGroup", out var propertyGroup);
     ```
+    A leading slash is accepted and ignored, so `"/Project/PropertyGroup"` means the same thing. Anything else that would produce a nameless segment - an empty path, a trailing slash, a doubled slash - throws `ArgumentException` rather than creating an element with no name. Because a creating path writes its segments into the document, they must also be names the document can read back: `GetOrAddElement("a b", …)` throws rather than producing `<a b />`, which comes back as an element `a` carrying an attribute `b` and so gets created again on every call. `GetElementsByPath` reads paths by the same rules, minus that last one - it writes nothing, so a segment no element can be named simply matches none.
   - `SetAttribute` - sets an attribute of an element. If the attribute does not exist, it is added.
     ```cs
     propertyGroup = propertyGroup.SetAttribute("TargetFramework", "net9.0");
@@ -47,6 +69,36 @@ In comparison to the original project, this fork has the following changes:
     string unit = root.GetIndentUnit();  // e.g. "    " or "\t"
     string newLine = root.GetNewLine();  // "\r\n" or "\n"
     ```
+  - `Descendants` - every element below this one, name-filtered if you want, through a struct enumerator rather than `DescendantNodes().OfType<>()`.
+    ```cs
+    foreach (XmlElementBaseSyntax reference in root.Descendants("PackageReference"))
+    {
+        // including the ones inside Choose/When
+    }
+    ```
+  - `GetElementByLocalName`, `GetElementsByLocalName`, `GetAttributeByLocalName`, `GetAttributeValueByLocalName` - match the local name whatever the prefix, for a document that is the same model whether or not it was hand-edited to use one.
+  - A `StringComparison` on every name lookup - `GetElement`, `GetAttribute`, `Descendants` and the rest, though not the path APIs, which match ordinally - for the formats that are case-insensitive about names (MSBuild, `packages.config`). An empty prefix means "unprefixed", the same as `null`, so `GetAttributeValue("Type", string.Empty)` does what it looks like it does.
+  - `Attributes` is now a struct enumerator over the attribute *nodes*, matching `Elements`, so the name, the value and the spans all stay reachable without allocating.
+  - `ValueSpan` and `ContentSpan` - the span of an attribute value inside its quotes, and the range between an element's tags. Both hold up in a buffer being typed into, where the closing quote or end tag is synthesized and zero-width.
+    ```cs
+    TextSpan toReplace = attribute.ValueSpan;  // excludes the quotes
+    ```
+  - `NameSpan` - the span of an element's name: on the element itself, and on `StartTag` and `EndTag` separately, which together are the pair a rename or linked editing edits. Zero-width but positioned where the name goes for a tag still being typed.
+    ```cs
+    TextSpan hover = element.NameSpan;
+    TextSpan renameSecondEnd = element.EndTag.NameSpan;
+    ```
+  - `TextSpan` deconstructs into `(start, length)`, so converting to another span type does not need to name this one - it shares its simple name with Roslyn's `TextSpan`, and a file naming both needs an alias. The optional `GerardSmit.Language.Xml.Roslyn` package goes further with `ToRoslynSpan()` and `ToXmlSpan()`; the core package stays dependency-free.
+  - `GetOrAddElement` and `AddElement` take an optional predicate, so the first path segment can say *which* match it means.
+    ```cs
+    root = root.GetOrAddElement("PropertyGroup", g => g.GetAttribute("Condition") is null, out var group);
+    ```
+  - `WithText` sets an element's text content, escaped. `SyntaxFactory.XmlEmptyElement(name, attributes)` builds `<PackageReference Include="A" />` without touching tokens.
+  - `GetElement`, `GetElements`, `GetElementsByPath`, `Descendants` and their `ByLocalName` counterparts also hang off `XmlDocumentSyntax`, treating the root element as the first path segment, so the nullable `Root` dance is gone from the common case.
+    ```cs
+    document.GetElementsByPath("Project/PropertyGroup/TargetFramework");
+    ```
+  - `SyntaxLocator.FindNode` answers with the node the caret is in at the end of the buffer, instead of falling back to the document.
 
 **Original README:**
 ---

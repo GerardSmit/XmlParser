@@ -56,6 +56,13 @@ namespace Microsoft.Language.Xml
 
                 var slotCount = includeTrivia ? node.GetSlotCountIncludingTrivia() : node.SlotCount;
 
+                // At the very end of the buffer every child ends exactly at the position, so the
+                // "ends before position" test rejects all of them and the walk stops at whatever
+                // node it had reached - the document, for a caret after the last typed character.
+                // Descending into the last child that reaches the position answers with the node
+                // the caret is actually in.
+                var atEnd = position == node.Start + node.FullWidth;
+
                 for (int i = index; i < slotCount; i++)
                 {
                     var child = includeTrivia ? node.GetSlotIncludingTrivia(i) : node.GetNodeSlot(i);
@@ -66,7 +73,8 @@ namespace Microsoft.Language.Xml
                             // child is after position
                             break;
                         }
-                        else if ((child.Start + child.FullWidth) <= position)
+                        else if ((child.Start + child.FullWidth) < position ||
+                                 ((child.Start + child.FullWidth) == position && !(atEnd && child.FullWidth > 0)))
                         {
                             // child ends before position, go to next child
                             continue;

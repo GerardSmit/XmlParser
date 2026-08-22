@@ -53,6 +53,30 @@ namespace Microsoft.Language.Xml
             return (XmlNameSyntax)new XmlNameSyntax.Green(prefix?.GreenNode, localName?.GreenNode).CreateRed();
         }
 
+        /// <summary>
+        /// Builds a name from "prefix:local" or "local", split the way the document would split it.
+        /// </summary>
+        /// <remarks>
+        /// Writing a prefixed name as one flat token gives the right text and the wrong tree: the
+        /// node reports the whole thing as its local name and no prefix, so an element built this
+        /// way is invisible to <c>GetElement("a", "p")</c> until someone reparses the document.
+        /// Only the first colon is read as the separator - anything after it is the local name,
+        /// which is not a name XML allows, but the factories do not validate and a name written
+        /// verbatim is the least surprising thing to do with one.
+        /// </remarks>
+        public static XmlNameSyntax XmlName(string name, SyntaxNode? trailingTrivia = null)
+        {
+            var colon = name.IndexOf(':');
+
+            return XmlName(
+                colon < 0
+                    ? null
+                    : XmlPrefix(
+                        XmlNameToken(name.Substring(0, colon), null, null),
+                        Punctuation(SyntaxKind.ColonToken, ":", null, null)),
+                XmlNameToken(colon < 0 ? name : name.Substring(colon + 1), null, trailingTrivia));
+        }
+
         public static PunctuationSyntax Punctuation(SyntaxKind kind, string spelling, SyntaxList<SyntaxNode> precedingTrivia, SyntaxList<SyntaxNode> followingTrivia)
         {
             return Punctuation(kind, spelling, precedingTrivia.Node, followingTrivia.Node);
@@ -279,7 +303,7 @@ namespace Microsoft.Language.Xml
                 // when there are attributes to separate it from.
                 return XmlEmptyElement(
                     LessThan,
-                    XmlName(null, XmlNameToken(name, null, attributes.Count > 0 ? Space : null)),
+                    XmlName(name, attributes.Count > 0 ? Space : null),
                     attributes.ToList(),
                     Punctuation(SyntaxKind.SlashGreaterThanToken, "/>", Space, null)
                 );
@@ -288,20 +312,41 @@ namespace Microsoft.Language.Xml
             return XmlElement(
                 XmlElementStartTag(
                     LessThan,
-                    XmlName(null, XmlNameToken(name, null, attributes.Count > 0 ? Space : null)),
+                    XmlName(name, attributes.Count > 0 ? Space : null),
                     attributes.ToList(),
                     GreaterThan
                 ),
                 children.ToList(),
                 XmlElementEndTag(
                     LessThanSlash,
-                    XmlName(null, XmlNameToken(name, null, null)),
+                    XmlName(name),
                     GreaterThan
                 )
             );
         }
 
         private static void AddItems(IEnumerable content, ref SyntaxListBuilder<XmlAttributeSyntax> attributes, ref SyntaxListBuilder<XmlNodeSyntax> children)
+        {
+            string? lastText = null;
+
+            AddItems(content, ref attributes, ref children, ref lastText);
+        }
+
+        /// <summary>
+        /// The last two characters of a string - as much of it as the next one has to look back at.
+        /// </summary>
+        private static string Tail(string text)
+        {
+            return text.Length <= 2 ? text : text.Substring(text.Length - 2);
+        }
+
+        /// <param name="lastText">
+        /// The last two characters written so far, which is as far back as the next string has to
+        /// look: two characters is all a "]]&gt;" can be split across. A node counts as much as a
+        /// string does - a text node ends in its own text, not in markup, so one ending in "]]"
+        /// followed by a string "&gt;" closes a CDATA section just the same.
+        /// </param>
+        private static void AddItems(IEnumerable content, ref SyntaxListBuilder<XmlAttributeSyntax> attributes, ref SyntaxListBuilder<XmlNodeSyntax> children, ref string? lastText)
         {
             foreach (var item in content)
             {
@@ -322,14 +367,27 @@ namespace Microsoft.Language.Xml
                 else if (item is XmlNodeSyntax node)
                 {
                     children.Add(node);
+
+                    // Not null, and appended rather than replaced: a text node ends in its own
+                    // text, "]]" is "]]" whether a string or a node put it there, and a node one
+                    // character long does not wipe out what came before it.
+                    lastText = Tail(lastText + node.ToFullString());
                 }
                 else if (item is string text)
                 {
-                    children.Add(XmlText(List<SyntaxNode>(XmlTextLiteralToken(text, null, null))));
+                    // What was written just before matters: "]]" and ">" arriving as two children
+                    // still close a CDATA section once they are next to each other.
+                    var encoded = XmlEscaping.EncodeText(text, lastText);
+
+                    children.Add(XmlText(List<SyntaxNode>(XmlTextLiteralToken(encoded, null, null))));
+
+                    // The tail of everything written so far, not of this string alone: "]", "]"
+                    // and ">" arrive as three children and still make a "]]>" between them.
+                    lastText = Tail(lastText + encoded);
                 }
                 else if (item is IEnumerable enumerable)
                 {
-                    AddItems(enumerable, ref attributes, ref children);
+                    AddItems(enumerable, ref attributes, ref children, ref lastText);
                 }
                 else
                 {
@@ -338,26 +396,50 @@ namespace Microsoft.Language.Xml
             }
         }
 
-        public static XmlAttributeSyntax XmlAttribute(string name, string value)
+        /// <param name="value">
+        /// The value, escaped on the way in. <c>null</c> builds the bare-name attribute an editor
+        /// leaves behind mid-keystroke (<c>&lt;a x /&gt;</c>) - a name with no "=" and no value.
+        /// </param>
+        public static XmlAttributeSyntax XmlAttribute(string name, string? value)
         {
             if (value is null)
             {
                 return XmlAttribute(
-                    XmlName(null, XmlNameToken(name, null, null)),
+                    XmlName(name),
                     null,
                     null
                 );
             }
 
             return XmlAttribute(
-                XmlName(null, XmlNameToken(name, null, null)),
+                XmlName(name),
                 Punctuation(SyntaxKind.EqualsToken, "=", null, null),
                 XmlString(
                     Punctuation(SyntaxKind.DoubleQuoteToken, "\"", null, null),
-                    List(XmlTextLiteralToken(value, null, null)),
+                    // The caller passes a value, not markup, so it is escaped here rather than
+                    // leaving them to produce a document that no longer parses.
+                    List(XmlTextLiteralToken(XmlEscaping.EncodeAttributeValue(value), null, null)),
                     Punctuation(SyntaxKind.DoubleQuoteToken, "\"", null, null)
                 )
             );
+        }
+
+        /// <summary>
+        /// Creates an empty XML element of the form &lt;element /&gt; from a name and attributes.
+        /// </summary>
+        public static XmlEmptyElementSyntax XmlEmptyElement(string name, params object[] attributes)
+        {
+            if (attributes is null)
+            {
+                throw new ArgumentNullException(nameof(attributes));
+            }
+
+            if (XmlElement(name, attributes) is not XmlEmptyElementSyntax element)
+            {
+                throw new ArgumentException("An empty element cannot have content.", nameof(attributes));
+            }
+
+            return element;
         }
 
         public static XmlPrefixSyntax XmlPrefix(XmlNameTokenSyntax? localName, PunctuationSyntax? colon)

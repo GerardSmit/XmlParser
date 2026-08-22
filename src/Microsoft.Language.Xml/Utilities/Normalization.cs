@@ -9,9 +9,14 @@ namespace Microsoft.Language.Xml.Utilities
         /// </summary>
         /// <param name="value"><see cref="string"/> to normalize.</param>
         /// <remarks>
+        /// Every tab and line end in an attribute value is a space, per XML 1.0 section 3.3.3,
+        /// with line ends normalized first so a CRLF counts once. A tab or line break the document
+        /// actually means is written as a character reference, and this runs before references are
+        /// resolved so that one survives.
+        /// <br/>
         /// Normalization specs:
-        /// <seealso href="https://www.w3.org/TR/2006/REC-xml11-20060816/#sec-line-ends">2.2.12 [XML] Section 3.3.3</seealso/>
-        /// <seealso href="https://learn.microsoft.com/en-us/openspecs/ie_standards/ms-xml/389b8ef1-e19e-40ac-80de-eec2cd0c58ae">2.11 [XML} End-of-Line Handling</seealso/>
+        /// <seealso href="https://www.w3.org/TR/2006/REC-xml11-20060816/#sec-line-ends">2.2.12 [XML] Section 3.3.3</seealso>
+        /// <seealso href="https://learn.microsoft.com/en-us/openspecs/ie_standards/ms-xml/389b8ef1-e19e-40ac-80de-eec2cd0c58ae">2.11 [XML] End-of-Line Handling</seealso>
         /// </remarks>
         public static string GetNormalizedAttributeValue(this string value) =>
             GetNormalizedAttributeValue(new StringBuilder(value));
@@ -38,35 +43,31 @@ namespace Microsoft.Language.Xml.Utilities
         private static void NormalizeAttributeValueTo(this StringBuilder inputBuffer, PooledStringBuilder outputBuffer)
         {
             var inputBufferLength = inputBuffer.Length;
-            char lastChar = default;
             for (int charIndex = 0; charIndex < inputBufferLength; charIndex++)
             {
                 var c = inputBuffer[charIndex];
                 switch (c)
                 {
-                    // If there is a sequence of CR and LF or CR 0x85 or CR 0x2028 replace them with a space (0x32)
-                    case '\r' when (charIndex + 1 < inputBufferLength && (inputBuffer[charIndex + 1] is '\n' or '\x85' or '\x2028')):
+                    // Line ends are normalized first (XML 1.0 section 2.11), so a CRLF is one
+                    // line ending and becomes one space rather than two.
+                    case '\r' when charIndex + 1 < inputBufferLength && inputBuffer[charIndex + 1] == '\n':
                         outputBuffer.Builder.Append(' ');
-                        charIndex++; // Skip next onece
+                        charIndex++;
                         break;
-                    // If current char is single CR or 0x85 or 0x2028 replace with a space(0x32)
+                    // Every remaining line end and tab is a space in its own right - there is no
+                    // "the last one was whitespace too" exception, so "a\n\nb" keeps both.
                     case '\r':
-                    case '\x85':
-                    case '\x2000':
-                        outputBuffer.Builder.Append(' ');
-                        break;
-                    // if current char is LF and previus not is LF or CR 
-                    case '\n' when lastChar != '\n' && lastChar != '\r':
-                        outputBuffer.Builder.Append(' ');
-                        break;
+                    case '\n':
                     case '\t':
                         outputBuffer.Builder.Append(' ');
                         break;
+                    // NEL and LINE SEPARATOR are line ends in XML 1.1 only. This parser reads
+                    // XML 1.0, where they are ordinary characters, and turning them into spaces
+                    // rewrites text the document meant to hold.
                     default:
                         outputBuffer.Builder.Append(c);
                         break;
                 }
-                lastChar = c;
             }
         }
     }
