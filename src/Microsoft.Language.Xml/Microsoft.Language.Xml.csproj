@@ -6,7 +6,7 @@
     <DebugType>embedded</DebugType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <Version>2.1.0</Version>
+    <Version>3.0.0</Version>
     <Nullable>enable</Nullable>
     <!--
       Ship the doc comments: most of what this fork adds is explained in them, and without the
