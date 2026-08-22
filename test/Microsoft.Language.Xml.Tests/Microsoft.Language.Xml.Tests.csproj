@@ -4,9 +4,11 @@
     <!--
       Both of the library's targets, so the netstandard2.0 build is covered too: it compiles a
       different branch of the entity decoder and runs against a different BCL, and until now
-      nothing ever ran it.
+      nothing ever ran it. Only where it can run, though - net472 needs Windows, and on the
+      Linux publish runner the test host aborts rather than skipping.
     -->
-    <TargetFrameworks>net8.0;net472</TargetFrameworks>
+    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0;net472</TargetFrameworks>
     <!-- net472 would otherwise default to C# 7.3, which the tests are not written in. -->
     <LangVersion>latest</LangVersion>
     <!--
